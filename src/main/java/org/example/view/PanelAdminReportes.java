@@ -352,10 +352,6 @@ public class PanelAdminReportes {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    //  HELPER PDF: tabla genérica con columnas en posición X absoluta
-    // ─────────────────────────────────────────────────────────────────────
-
     private void generarPDF(File archivo, String titulo, String[] cols,
                             float[] anchos, Object[][] filas) throws IOException {
         try (PDDocument doc = new PDDocument()) {
@@ -425,10 +421,6 @@ public class PanelAdminReportes {
             doc.save(archivo);
         }
     }
-
-    // ─────────────────────────────────────────────────────────────────────
-    //  HELPERS
-    // ─────────────────────────────────────────────────────────────────────
 
     /** Rellena un rectángulo con un gris claro (para encabezado y filas alternas) */
     private void rellenarFila(PDPageContentStream cs, float x, float y,

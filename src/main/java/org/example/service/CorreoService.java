@@ -45,9 +45,9 @@ public class CorreoService {
     private static void enviar(String destinatario, String asunto, String cuerpoHtml) throws Exception {
         if (!ConfigService.isCorreoConfigurado()) {
             throw new Exception(
-                "El correo no esta configurado.\n" +
-                "Ve a: Sidebar Admin -> Configurar correo\n" +
-                "e ingresa tus credenciales SMTP."
+                    "El correo no esta configurado.\n" +
+                            "Ve a: Sidebar Admin -> Configurar correo\n" +
+                            "e ingresa tus credenciales SMTP."
             );
         }
 
@@ -59,21 +59,24 @@ public class CorreoService {
         String port = ConfigService.get("smtp.port", "587");
 
         Properties props = new Properties();
-        props.put("mail.smtp.auth",            "true");
-        props.put("mail.smtp.starttls.enable", "true");
-        props.put("mail.smtp.host",            host);
-        props.put("mail.smtp.port",            port);
-        props.put("mail.smtp.ssl.trust",       host);
-        props.put("mail.smtp.connectiontimeout", "10000");
-        props.put("mail.smtp.timeout",           "10000");
+        props.put("mail.smtp.auth",               "true");
+        props.put("mail.smtp.starttls.enable",    "true");
+        props.put("mail.smtp.starttls.required",  "true");
+        props.put("mail.smtp.host",               host);
+        props.put("mail.smtp.port",               port);
+        props.put("mail.smtp.ssl.trust",          host);
+        props.put("mail.smtp.ssl.protocols",      "TLSv1.2");
+        props.put("mail.smtp.connectiontimeout",  "15000");
+        props.put("mail.smtp.timeout",            "15000");
+        props.put("mail.smtp.writetimeout",       "15000");
 
         Session session = Session.getInstance(props, new Authenticator() {
             @Override
             protected PasswordAuthentication getPasswordAuthentication() {
-                // Autenticacion con el login SMTP (puede ser distinto al FROM)
                 return new PasswordAuthentication(smtpLogin, password);
             }
         });
+        session.setDebug(true); // Muestra el log SMTP en consola de IntelliJ
 
         try {
             Message mensaje = new MimeMessage(session);
@@ -87,22 +90,22 @@ public class CorreoService {
             boolean esBrevo = host2.contains("brevo");
             if (esBrevo) {
                 throw new Exception(
-                    "Credenciales de Brevo incorrectas.\n\n" +
-                    "Verifica en brevo.com:\n" +
-                    "  1. SMTP & API -> Generar una clave SMTP\n" +
-                    "  2. Copia esa clave (empieza con letras y numeros)\n" +
-                    "  3. NO uses tu contrasena de cuenta, usa la CLAVE SMTP\n" +
-                    "  4. El login SMTP es tu email de cuenta Brevo\n\n" +
-                    "Ve a: Sidebar Admin -> Configurar correo"
+                        "Credenciales de Brevo incorrectas.\n\n" +
+                                "Verifica en brevo.com:\n" +
+                                "  1. SMTP & API -> Generar una clave SMTP\n" +
+                                "  2. Copia esa clave (empieza con letras y numeros)\n" +
+                                "  3. NO uses tu contrasena de cuenta, usa la CLAVE SMTP\n" +
+                                "  4. El login SMTP es tu email de cuenta Brevo\n\n" +
+                                "Ve a: Sidebar Admin -> Configurar correo"
                 );
             } else {
                 throw new Exception(
-                    "Credenciales de Gmail incorrectas.\n\n" +
-                    "Verifica que:\n" +
-                    "  1. Activaste verificacion en 2 pasos\n" +
-                    "  2. Generaste una Contrasena de Aplicacion\n" +
-                    "  3. Usas esa clave de 16 letras (no tu clave normal)\n\n" +
-                    "Ve a: Sidebar Admin -> Configurar correo"
+                        "Credenciales de Gmail incorrectas.\n\n" +
+                                "Verifica que:\n" +
+                                "  1. Activaste verificacion en 2 pasos\n" +
+                                "  2. Generaste una Contrasena de Aplicacion\n" +
+                                "  3. Usas esa clave de 16 letras (no tu clave normal)\n\n" +
+                                "Ve a: Sidebar Admin -> Configurar correo"
                 );
             }
         } catch (MessagingException ex) {

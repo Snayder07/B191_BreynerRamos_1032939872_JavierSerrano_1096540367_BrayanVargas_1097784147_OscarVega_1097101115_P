@@ -148,11 +148,14 @@ public class PanelCalendario {
         JButton btnAnt = navBtn("< Anterior");
         JButton btnHoy = navBtn("Hoy");
         JButton btnSig = navBtn("Siguiente >");
+        JButton btnIr  = navBtn("📅 Ir a fecha...");
         btnHoy.setFont(new Font("Segoe UI",Font.BOLD,12));
+        btnIr.setBackground(new Color(12,80,48));
         btnAnt.addActionListener(e->{ semanaInicio=semanaInicio.minusWeeks(1); construir(); });
         btnHoy.addActionListener(e->{ semanaInicio=LocalDate.now().with(DayOfWeek.MONDAY); construir(); });
         btnSig.addActionListener(e->{ semanaInicio=semanaInicio.plusWeeks(1); construir(); });
-        nav.add(lblSemana); nav.add(btnAnt); nav.add(btnHoy); nav.add(btnSig);
+        btnIr.addActionListener(e -> abrirSelectorFecha());
+        nav.add(lblSemana); nav.add(btnAnt); nav.add(btnHoy); nav.add(btnSig); nav.add(btnIr);
 
         JPanel der = new JPanel(new FlowLayout(FlowLayout.RIGHT,0,0));
         der.setOpaque(false);
@@ -855,6 +858,203 @@ public class PanelCalendario {
                 +"<hr style='border:none;border-top:1px solid #e0e0e0;margin:20px 0'/>"
                 +"<p style='color:#aaa;font-size:11px;text-align:center'>© Kampets Veterinaria</p>"
                 +"</div></body></html>";
+    }
+
+    // ════════════════════════════════════════════════════════
+    //  SELECTOR RÁPIDO DE FECHA (Ir a fecha...)
+    // ════════════════════════════════════════════════════════
+    private void abrirSelectorFecha() {
+        JDialog dlg = new JDialog(SwingUtilities.getWindowAncestor(panel),
+                "Ir a fecha", java.awt.Dialog.ModalityType.APPLICATION_MODAL);
+        dlg.setUndecorated(true);
+        dlg.getRootPane().setBorder(BorderFactory.createLineBorder(C[3], 2));
+
+        JPanel root = new JPanel(new BorderLayout(0, 0));
+        root.setBackground(Color.WHITE);
+
+        // ── Header ────────────────────────────────────────
+        JPanel header = new JPanel(new BorderLayout());
+        header.setBackground(C[1]);
+        header.setBorder(BorderFactory.createEmptyBorder(10, 18, 10, 12));
+        JLabel lTit = new JLabel("Ir a fecha");
+        lTit.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lTit.setForeground(Color.WHITE);
+        JButton btnX = new JButton("  X  ");
+        btnX.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnX.setForeground(Color.WHITE);
+        btnX.setBackground(new Color(180, 30, 30));
+        btnX.setOpaque(true); btnX.setBorderPainted(false); btnX.setFocusPainted(false);
+        btnX.setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
+        btnX.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnX.addActionListener(e -> dlg.dispose());
+        header.add(lTit, BorderLayout.WEST);
+        header.add(btnX, BorderLayout.EAST);
+        root.add(header, BorderLayout.NORTH);
+
+        // ── Selector mes/año ──────────────────────────────
+        final LocalDate[] seleccionado = {semanaInicio};
+        final JPanel[] refGrid = {null};
+
+        // Estado navegable del mini-calendario
+        final int[] navYear  = {semanaInicio.getYear()};
+        final int[] navMonth = {semanaInicio.getMonthValue()};
+
+        JPanel body = new JPanel(new BorderLayout(0, 8));
+        body.setBackground(Color.WHITE);
+        body.setBorder(BorderFactory.createEmptyBorder(14, 18, 14, 18));
+
+        // Fila de mes/año con flechas
+        JPanel navMes = new JPanel(new BorderLayout(6, 0));
+        navMes.setBackground(Color.WHITE);
+
+        JButton bAntMes = miniNavBtn("<");
+        JButton bSigMes = miniNavBtn(">");
+        JLabel lblMesAnio = new JLabel("", SwingConstants.CENTER);
+        lblMesAnio.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        lblMesAnio.setForeground(C[6]);
+
+        navMes.add(bAntMes, BorderLayout.WEST);
+        navMes.add(lblMesAnio, BorderLayout.CENTER);
+        navMes.add(bSigMes, BorderLayout.EAST);
+        body.add(navMes, BorderLayout.NORTH);
+
+        // Panel contenedor del grid de días
+        JPanel gridWrapper = new JPanel(new BorderLayout());
+        gridWrapper.setBackground(Color.WHITE);
+        body.add(gridWrapper, BorderLayout.CENTER);
+
+        // Función para construir el grid de días
+        Runnable[] construirGrid = {null};
+        construirGrid[0] = () -> {
+            gridWrapper.removeAll();
+
+            int anio = navYear[0], mes = navMonth[0];
+            DateTimeFormatter fMes = DateTimeFormatter.ofPattern("MMMM yyyy", new Locale("es","CO"));
+            LocalDate primeroDia = LocalDate.of(anio, mes, 1);
+            String mesAnioStr = primeroDia.format(fMes);
+            lblMesAnio.setText(Character.toUpperCase(mesAnioStr.charAt(0)) + mesAnioStr.substring(1));
+
+            JPanel grid = new JPanel(new GridLayout(0, 7, 3, 3));
+            grid.setBackground(Color.WHITE);
+
+            // Cabecera días
+            String[] dias = {"Lu","Ma","Mi","Ju","Vi","Sá","Do"};
+            for (String d : dias) {
+                JLabel lh = new JLabel(d, SwingConstants.CENTER);
+                lh.setFont(new Font("Segoe UI", Font.BOLD, 11));
+                lh.setForeground(C[7]);
+                grid.add(lh);
+            }
+
+            // Espacios vacíos antes del primer día
+            int inicioDia = primeroDia.getDayOfWeek().getValue() - 1; // 0=Lun
+            for (int i = 0; i < inicioDia; i++) grid.add(new JLabel());
+
+            // Días del mes
+            int diasMes = primeroDia.lengthOfMonth();
+            for (int d = 1; d <= diasMes; d++) {
+                LocalDate fecha = LocalDate.of(anio, mes, d);
+                boolean esDom  = fecha.getDayOfWeek() == DayOfWeek.SUNDAY;
+                boolean esHoy2 = fecha.equals(LocalDate.now());
+                boolean esSelec = fecha.with(DayOfWeek.MONDAY).equals(seleccionado[0].with(DayOfWeek.MONDAY));
+
+                JButton btn = new JButton(String.valueOf(d));
+                btn.setFont(new Font("Segoe UI", esHoy2 ? Font.BOLD : Font.PLAIN, 12));
+                btn.setFocusPainted(false); btn.setBorderPainted(false); btn.setOpaque(true);
+                btn.setCursor(esDom ? Cursor.getDefaultCursor() : new Cursor(Cursor.HAND_CURSOR));
+                btn.setBorder(BorderFactory.createEmptyBorder(4, 2, 4, 2));
+
+                if (esDom) {
+                    btn.setBackground(new Color(250, 245, 245));
+                    btn.setForeground(new Color(200, 150, 150));
+                    btn.setEnabled(false);
+                } else if (esSelec) {
+                    btn.setBackground(C[3]);
+                    btn.setForeground(Color.WHITE);
+                } else if (esHoy2) {
+                    btn.setBackground(new Color(220, 245, 230));
+                    btn.setForeground(C[1]);
+                } else {
+                    btn.setBackground(Color.WHITE);
+                    btn.setForeground(C[6]);
+                }
+
+                final LocalDate fechaFinal = fecha;
+                btn.addActionListener(ev -> {
+                    seleccionado[0] = fechaFinal.with(DayOfWeek.MONDAY);
+                    semanaInicio = seleccionado[0];
+                    dlg.dispose();
+                    construir();
+                });
+
+                // Hover
+                if (!esDom) {
+                    Color bgNormal = btn.getBackground();
+                    btn.addMouseListener(new MouseAdapter() {
+                        @Override public void mouseEntered(MouseEvent e) {
+                            if (!esSelec) btn.setBackground(new Color(200, 235, 215));
+                        }
+                        @Override public void mouseExited(MouseEvent e) {
+                            btn.setBackground(bgNormal);
+                        }
+                    });
+                }
+                grid.add(btn);
+            }
+
+            refGrid[0] = grid;
+            gridWrapper.add(grid, BorderLayout.CENTER);
+            gridWrapper.revalidate();
+            gridWrapper.repaint();
+            dlg.pack();
+        };
+
+        // Lógica de navegación de mes
+        bAntMes.addActionListener(e -> {
+            navMonth[0]--;
+            if (navMonth[0] < 1) { navMonth[0] = 12; navYear[0]--; }
+            construirGrid[0].run();
+        });
+        bSigMes.addActionListener(e -> {
+            navMonth[0]++;
+            if (navMonth[0] > 12) { navMonth[0] = 1; navYear[0]++; }
+            construirGrid[0].run();
+        });
+
+        // Nota informativa
+        JLabel nota = new JLabel("<html><i style='color:#888'>Selecciona cualquier día — el calendario<br>saltará a esa semana.</i></html>",
+                SwingConstants.CENTER);
+        nota.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        nota.setBorder(BorderFactory.createEmptyBorder(6, 0, 0, 0));
+        body.add(nota, BorderLayout.SOUTH);
+
+        root.add(body, BorderLayout.CENTER);
+        dlg.setContentPane(root);
+
+        // Construir grid inicial
+        construirGrid[0].run();
+
+        dlg.pack();
+        dlg.setMinimumSize(new Dimension(260, 0));
+        Point loc = panel.getLocationOnScreen();
+        dlg.setLocation(loc.x + panel.getWidth() / 2 - dlg.getWidth() / 2,
+                loc.y + panel.getHeight() / 2 - dlg.getHeight() / 2);
+        dlg.setVisible(true);
+    }
+
+    private JButton miniNavBtn(String txt) {
+        JButton b = new JButton(txt);
+        b.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        b.setBackground(C[4]); b.setForeground(C[6]);
+        b.setOpaque(true); b.setBorderPainted(false); b.setFocusPainted(false);
+        b.setBorder(BorderFactory.createEmptyBorder(4, 12, 4, 12));
+        b.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        b.addMouseListener(new MouseAdapter() {
+            final Color o = b.getBackground();
+            @Override public void mouseEntered(MouseEvent e) { b.setBackground(o.brighter()); }
+            @Override public void mouseExited(MouseEvent e)  { b.setBackground(o); }
+        });
+        return b;
     }
 
     private boolean esHoy(LocalDate f){ return f.equals(LocalDate.now()); }

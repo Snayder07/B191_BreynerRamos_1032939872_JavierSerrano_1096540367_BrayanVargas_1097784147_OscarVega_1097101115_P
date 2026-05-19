@@ -390,9 +390,20 @@ public class NuevaCitaAdminDialog extends JDialog {
                                     "<tr><td style='padding:8px 12px;background:#dcfce7;color:#15803d;font-weight:bold;'>Hora</td><td style='padding:8px 12px;'>" + hora + "</td></tr>" +
                                     "</table>" +
                                     "<p style='color:#6b7280;font-size:13px;'>Por favor preséntate puntualmente. 🐾</p></div>";
-                    try {
-                        CorreoService.enviarCorreoGeneral(cliente.getCorreo(), cliente.getNombre(), "Confirmación de cita - Kampets", cuerpoCorreo);
-                    } catch (Exception ignored) {}
+                    final String correoFinal = cliente.getCorreo();
+                    final String nombreFinal = cliente.getNombre();
+                    final String cuerpoFinal = cuerpoCorreo;
+                    new Thread(() -> {
+                        try {
+                            CorreoService.enviarCorreoGeneral(correoFinal, nombreFinal, "Confirmación de cita - Kampets", cuerpoFinal);
+                        } catch (Exception mailEx) {
+                            System.err.println("[CORREO ERROR] " + mailEx.getMessage());
+                            SwingUtilities.invokeLater(() ->
+                                    JOptionPane.showMessageDialog(null,
+                                            "Cita guardada, pero el correo no se pudo enviar:\n" + mailEx.getMessage(),
+                                            "Aviso de correo", JOptionPane.WARNING_MESSAGE));
+                        }
+                    }).start();
                 }
 
                 guardado = true;

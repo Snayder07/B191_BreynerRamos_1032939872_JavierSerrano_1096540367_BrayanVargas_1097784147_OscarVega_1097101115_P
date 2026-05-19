@@ -26,7 +26,7 @@ public class AgendarCitaController {
     private final MascotaService  mascotaService  = new MascotaService();
     private final EmpleadoService empleadoService = new EmpleadoService();
 
-    // ── Listar mascotas para el combo ─────────────────────
+
     public List<Mascotas> listarMascotas() {
         try {
             return mascotaService.listarTodas();
@@ -44,7 +44,7 @@ public class AgendarCitaController {
             return java.util.Collections.emptyList();
         }
     }
-    // ── Listar veterinarios para el combo ─────────────────
+
     public List<Empleados> listarVeterinarios() {
         try {
             return empleadoService.listarTodos();
@@ -98,25 +98,21 @@ public class AgendarCitaController {
             citaService.guardarCita(cita);
 
             if (hayCupo) {
-                // Hay cupo → confirmada de una vez, enviar correo
+                // Hay cupo → confirmada, enviar correo en hilo separado
                 String nombreCliente = mascota.getCliente() != null ? mascota.getCliente().getNombre() : "cliente";
                 String correoCliente = mascota.getCliente() != null ? mascota.getCliente().getCorreo() : null;
-                if (correoCliente != null && !correoCliente.isEmpty()) {
-                    String cuerpo =
-                            "<div style='font-family:Arial,sans-serif;max-width:520px;margin:auto;background:#f0fdf4;border-radius:10px;padding:32px;'>" +
-                                    "<h2 style='color:#16a34a;'>✅ Cita Confirmada</h2>" +
-                                    "<p style='color:#374151;font-size:15px;'>Hola <b>" + nombreCliente + "</b>, tu cita en <b>Kampets Veterinaria</b> ha sido <b>confirmada</b>.</p>" +
-                                    "<table style='width:100%;border-collapse:collapse;margin:20px 0;'>" +
-                                    "<tr><td style='padding:10px 14px;background:#dcfce7;color:#15803d;font-weight:bold;'>Mascota</td><td style='padding:10px 14px;background:#f0fdf4;'>" + mascota.getNombre() + "</td></tr>" +
-                                    "<tr><td style='padding:10px 14px;background:#dcfce7;color:#15803d;font-weight:bold;'>Fecha</td><td style='padding:10px 14px;background:#f0fdf4;'>" + fecha + "</td></tr>" +
-                                    "<tr><td style='padding:10px 14px;background:#dcfce7;color:#15803d;font-weight:bold;'>Hora</td><td style='padding:10px 14px;background:#f0fdf4;'>" + hora + "</td></tr>" +
-                                    "</table>" +
-                                    "<p style='color:#6b7280;font-size:13px;'>Por favor preséntate puntualmente.</p>" +
-                                    "<p style='color:#16a34a;font-weight:bold;'>¡Hasta pronto! 🐾</p></div>";
-                    try {
-                        CorreoService.enviarCorreoGeneral(correoCliente, nombreCliente, "Confirmación de cita - Kampets", cuerpo);
-                    } catch (Exception ignored) {}
-                }
+                String cuerpo =
+                        "<div style='font-family:Arial,sans-serif;max-width:520px;margin:auto;background:#f0fdf4;border-radius:10px;padding:32px;'>" +
+                                "<h2 style='color:#16a34a;'>✅ Cita Confirmada</h2>" +
+                                "<p style='color:#374151;font-size:15px;'>Hola <b>" + nombreCliente + "</b>, tu cita en <b>Kampets Veterinaria</b> ha sido <b>confirmada</b>.</p>" +
+                                "<table style='width:100%;border-collapse:collapse;margin:20px 0;'>" +
+                                "<tr><td style='padding:10px 14px;background:#dcfce7;color:#15803d;font-weight:bold;'>Mascota</td><td style='padding:10px 14px;background:#f0fdf4;'>" + mascota.getNombre() + "</td></tr>" +
+                                "<tr><td style='padding:10px 14px;background:#dcfce7;color:#15803d;font-weight:bold;'>Fecha</td><td style='padding:10px 14px;background:#f0fdf4;'>" + fecha + "</td></tr>" +
+                                "<tr><td style='padding:10px 14px;background:#dcfce7;color:#15803d;font-weight:bold;'>Hora</td><td style='padding:10px 14px;background:#f0fdf4;'>" + hora + "</td></tr>" +
+                                "</table>" +
+                                "<p style='color:#6b7280;font-size:13px;'>Por favor preséntate puntualmente.</p>" +
+                                "<p style='color:#16a34a;font-weight:bold;'>¡Hasta pronto! 🐾</p></div>";
+
                 String msg = "¡Cita agendada y confirmada!\n\n"
                         + "Mascota:     " + mascota.getNombre()  + "\n"
                         + "Veterinario: " + empleado.getNombre() + "\n"
@@ -125,6 +121,23 @@ public class AgendarCitaController {
                 if (direccionDomicilio != null && !direccionDomicilio.trim().isEmpty())
                     msg += "\nDomicilio:   " + direccionDomicilio.trim();
                 JOptionPane.showMessageDialog(panel, msg, "Cita confirmada", JOptionPane.INFORMATION_MESSAGE);
+
+                // Enviar correo en hilo separado para no bloquear la UI
+                if (correoCliente != null && !correoCliente.isEmpty()) {
+                    final String correoFinal  = correoCliente;
+                    final String nombreFinal  = nombreCliente;
+                    final String cuerpoFinal  = cuerpo;
+                    new Thread(() -> {
+                        try {
+                            CorreoService.enviarCorreoGeneral(correoFinal, nombreFinal, "Confirmación de cita - Kampets", cuerpoFinal);
+                        } catch (Exception ex) {
+                            SwingUtilities.invokeLater(() ->
+                                    JOptionPane.showMessageDialog(panel,
+                                            "Cita guardada, pero el correo no se pudo enviar:\n" + ex.getMessage(),
+                                            "Aviso de correo", JOptionPane.WARNING_MESSAGE));
+                        }
+                    }).start();
+                }
             } else {
                 // Sin cupo → queda en espera, el admin la confirmará
                 String msg = "Tu cita fue registrada en lista de espera.\n\n"

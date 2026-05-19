@@ -364,6 +364,20 @@ public class PanelAdminCitas {
                 Citas cita = citas.get(filaActual);
                 if (cita.getId() == null) return;
 
+                // Bloquear si ya está confirmada, completada o cancelada
+                EstadoCita estadoActual = cita.getEstadoCita();
+                if (estadoActual == EstadoCita.CONFIRMADA) {
+                    JOptionPane.showMessageDialog(panel,
+                            "Esta cita ya está confirmada.", "Sin cambios", JOptionPane.INFORMATION_MESSAGE);
+                    return;
+                }
+                if (estadoActual == EstadoCita.COMPLETADA || estadoActual == EstadoCita.CANCELADA) {
+                    JOptionPane.showMessageDialog(panel,
+                            "No se puede confirmar una cita " + estadoActual.name().toLowerCase() + ".",
+                            "Sin cambios", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+
                 int respuesta = JOptionPane.showConfirmDialog(panel,
                         "Confirmar la cita de " +
                                 (cita.getMascota() != null ? cita.getMascota().getNombre() : "esta mascota") +
