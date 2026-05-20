@@ -17,6 +17,15 @@ public class ControlVacunaRepositoryImpl implements ControlVacunaRepository {
     }
 
     @Override
+    public void actualizar(Control_vacunas cv) {
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
+        em.merge(cv);
+        em.getTransaction().commit();
+        em.close();
+    }
+
+    @Override
     public Control_vacunas buscarPorId(Integer id) {
         EntityManager em = JPAUtil.getEntityManager();
         Control_vacunas cv = em.find(Control_vacunas.class, id);
@@ -27,22 +36,35 @@ public class ControlVacunaRepositoryImpl implements ControlVacunaRepository {
     @Override
     public List<Control_vacunas> buscarTodos() {
         EntityManager em = JPAUtil.getEntityManager();
-        List<Control_vacunas> lista = em.createQuery(
-                "SELECT cv FROM Control_vacunas cv", Control_vacunas.class
-        ).getResultList();
-        em.close();
-        return lista;
+        try {
+            return em.createQuery(
+                "SELECT cv FROM Control_vacunas cv " +
+                "JOIN FETCH cv.mascota m " +
+                "JOIN FETCH m.cliente " +
+                "JOIN FETCH m.especie " +
+                "JOIN FETCH cv.vacuna " +
+                "ORDER BY m.nombre, cv.fechaAplicacion",
+                Control_vacunas.class
+            ).getResultList();
+        } finally { em.close(); }
     }
 
     @Override
     public List<Control_vacunas> buscarPorCliente(Integer clienteId) {
         EntityManager em = JPAUtil.getEntityManager();
-        List<Control_vacunas> lista = em.createQuery(
-                "SELECT cv FROM Control_vacunas cv WHERE cv.mascota.cliente.id = :clienteId", Control_vacunas.class)
+        try {
+            return em.createQuery(
+                "SELECT cv FROM Control_vacunas cv " +
+                "JOIN FETCH cv.mascota m " +
+                "JOIN FETCH m.cliente c " +
+                "JOIN FETCH m.especie " +
+                "JOIN FETCH cv.vacuna " +
+                "WHERE c.id = :clienteId " +
+                "ORDER BY m.nombre, cv.fechaAplicacion",
+                Control_vacunas.class)
                 .setParameter("clienteId", clienteId)
                 .getResultList();
-        em.close();
-        return lista;
+        } finally { em.close(); }
     }
 
     @Override

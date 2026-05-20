@@ -18,13 +18,15 @@
         <class>org.example.model.Cita_servicio</class>
         <properties>
             <property name="jakarta.persistence.jdbc.driver" value="org.postgresql.Driver"/>
-            <property name="jakarta.persistence.jdbc.url" value="jdbc:postgresql://aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require"/>
+            <property name="jakarta.persistence.jdbc.url" value="jdbc:postgresql://aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require&amp;prepareThreshold=0"/>
             <property name="jakarta.persistence.jdbc.user" value="postgres.swsxsodiwaoeqtkiqfox"/>
             <property name="jakarta.persistence.jdbc.password" value="BVOVBRDS071207"/>
             <property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQLDialect"/>
-            <property name="hibernate.show_sql" value="true"/>
-            <property name="hibernate.format_sql" value="true"/>
+            <property name="hibernate.show_sql" value="false"/>
+            <property name="hibernate.format_sql" value="false"/>
             <property name="hibernate.hbm2ddl.auto" value="update"/>
+            <!-- JDBC batching para inserciones en bloque -->
+            <property name="hibernate.jdbc.batch_size" value="20"/>
         </properties>
     </persistence-unit>
 </persistence>
