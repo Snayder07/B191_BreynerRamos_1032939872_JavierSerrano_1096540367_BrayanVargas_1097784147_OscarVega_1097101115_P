@@ -165,6 +165,29 @@ public class NuevaCitaAdminDialog extends JDialog {
         root.add(seccion("Datos de la cita"));
         root.add(Box.createVerticalStrut(8));
 
+        List<Servicio> serviciosList;
+        try {
+            jakarta.persistence.EntityManager emS = org.example.util.JPAUtil.getEntityManager();
+            serviciosList = emS.createQuery("SELECT s FROM Servicio s", Servicio.class).getResultList();
+            emS.close();
+        } catch (Exception ex) { serviciosList = new java.util.ArrayList<>(); }
+        JComboBox<Object> cbMotivo = new JComboBox<>();
+        cbMotivo.addItem("-- Selecciona un servicio --");
+        for (Servicio s : serviciosList) cbMotivo.addItem(s);
+        cbMotivo.setFont(new Font("Arial", Font.PLAIN, 13));
+        cbMotivo.setBackground(Color.WHITE);
+        cbMotivo.setAlignmentX(LEFT_ALIGNMENT);
+        cbMotivo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        cbMotivo.setRenderer(new DefaultListCellRenderer() {
+            public Component getListCellRendererComponent(JList<?> l, Object v, int i, boolean s, boolean f) {
+                super.getListCellRendererComponent(l, v, i, s, f);
+                if (v instanceof Servicio) setText(((Servicio) v).getNombre());
+                return this;
+            }
+        });
+        root.add(filaCombo("Servicio *", cbMotivo));
+        root.add(Box.createVerticalStrut(8));
+
         // Fecha con JDateChooser (igual que el panel de cliente)
         JPanel filaFechaHora = new JPanel(new GridLayout(1, 2, 16, 0));
         filaFechaHora.setBackground(VERDE_LT);
@@ -277,8 +300,12 @@ public class NuevaCitaAdminDialog extends JDialog {
                 String horaStr       = (String) cbHora.getSelectedItem();
                 boolean esDomicilio  = rbDomicilio.isSelected();
                 String direccion     = tfDireccion.getText().trim();
+                Servicio servicioSel = (cbMotivo.getSelectedItem() instanceof Servicio)
+                        ? (Servicio) cbMotivo.getSelectedItem() : null;
+                String motivo = servicioSel != null ? servicioSel.getNombre() : null;
 
-                if (nombreDueno.isEmpty())   throw new Exception("El nombre del dueno es obligatorio.");
+                if (nombreDueno.isEmpty()) throw new Exception("El nombre del dueno es obligatorio.");
+                if (motivo == null)        throw new Exception("Selecciona el servicio / motivo de la cita.");
                 if (dateChooser.getDate() == null) throw new Exception("Selecciona la fecha de la cita.");
                 if (horaStr == null || horaStr.startsWith("Selecciona")) throw new Exception("Selecciona la hora de la cita.");
                 if (esDomicilio && direccion.isEmpty()) throw new Exception("Ingresa la direccion del domicilio.");
@@ -375,6 +402,7 @@ public class NuevaCitaAdminDialog extends JDialog {
                 cita.setFechaCita(fecha);
                 cita.setHoraCita(hora);
                 cita.setEstadoCita(estadoFinal);
+                cita.setMotivo(motivo);
                 if (esDomicilio) cita.setDireccionDomicilio(direccion);
                 citaSvc.guardarCita(cita);
 

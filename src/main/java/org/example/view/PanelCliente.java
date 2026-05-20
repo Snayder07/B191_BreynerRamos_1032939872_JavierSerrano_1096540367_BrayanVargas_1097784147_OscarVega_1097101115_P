@@ -10,6 +10,8 @@ import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
+import java.net.URL;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
@@ -82,15 +84,32 @@ public class PanelCliente {
         sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
         sidebar.setBackground(C[1]);
         sidebar.setPreferredSize(new Dimension(240, 0));
-        sidebar.setBorder(BorderFactory.createEmptyBorder(20, 12, 20, 12));
+        sidebar.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
 
-        JLabel logo;
-        try {
-            ImageIcon logoIcon = new ImageIcon(getClass().getResource("/logo.png"));
-            logo = new JLabel(new ImageIcon(logoIcon.getImage().getScaledInstance(160, 55, Image.SCALE_SMOOTH)));
-        } catch (Exception e) { logo = crearLabel("Kampets", 18, Font.BOLD, C[5]); }
-        logo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        sidebar.add(logo); sidebar.add(Box.createVerticalStrut(16));
+        // ── Logo ─────────────────────────────────────────
+        JPanel logoPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                try {
+                    URL imgUrl = PanelCliente.class.getClassLoader().getResource("logo_cliente.png");
+                    if (imgUrl != null) {
+                        Graphics2D g2 = (Graphics2D) g.create();
+                        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+                        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                        g2.drawImage(new ImageIcon(imgUrl).getImage(), 0, 0, getWidth(), getHeight(), this);
+                        g2.dispose();
+                    }
+                } catch (Exception ignored) {}
+            }
+        };
+        logoPanel.setBackground(C[1]);
+        logoPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 140));
+        logoPanel.setMinimumSize(new Dimension(240, 140));
+        logoPanel.setPreferredSize(new Dimension(240, 140));
+        logoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        sidebar.add(logoPanel);
 
         JSeparator sep = new JSeparator();
         sep.setForeground(C[3]); sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));

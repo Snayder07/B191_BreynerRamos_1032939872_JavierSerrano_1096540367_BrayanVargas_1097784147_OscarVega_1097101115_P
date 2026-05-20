@@ -56,7 +56,7 @@ public class AgendarCitaController {
     // ── Guardar cita en BD ────────────────────────────────
     public boolean guardarCita(Mascotas mascota, Empleados empleado,
                                String fechaStr, String horaStr,
-                               String direccionDomicilio, JPanel panel) {
+                               String direccionDomicilio, String motivo, JPanel panel) {
         try {
             if (mascota  == null) throw new Exception("Selecciona una mascota.");
             if (empleado == null) throw new Exception("Selecciona un veterinario.");
@@ -94,6 +94,8 @@ public class AgendarCitaController {
             cita.setEstadoCita(estadoNuevo);
             if (direccionDomicilio != null && !direccionDomicilio.trim().isEmpty())
                 cita.setDireccionDomicilio(direccionDomicilio.trim());
+            if (motivo != null && !motivo.trim().isEmpty())
+                cita.setMotivo(motivo.trim());
 
             citaService.guardarCita(cita);
 

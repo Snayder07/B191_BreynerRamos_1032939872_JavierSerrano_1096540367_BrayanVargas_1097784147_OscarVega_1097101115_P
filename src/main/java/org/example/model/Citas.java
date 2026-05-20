@@ -3,6 +3,8 @@ package org.example.model;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "CITAS")
@@ -33,6 +35,12 @@ public class Citas {
     @Column(name = "direccion_domicilio", length = 200)
     private String direccionDomicilio;
 
+    @Column(name = "motivo", length = 200)
+    private String motivo;
+
+    @OneToMany(mappedBy = "cita", fetch = FetchType.EAGER)
+    private List<Cita_servicio> servicios = new ArrayList<>();
+
     public Citas() {}
 
     public Integer getId() { return id; }
@@ -55,4 +63,9 @@ public class Citas {
 
     public String getDireccionDomicilio() { return direccionDomicilio; }
     public void setDireccionDomicilio(String d) { this.direccionDomicilio = d; }
+
+    public String getMotivo() { return motivo; }
+    public void setMotivo(String motivo) { this.motivo = motivo; }
+
+    public List<Cita_servicio> getServicios() { return servicios; }
 }

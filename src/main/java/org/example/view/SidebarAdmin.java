@@ -4,6 +4,8 @@ import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
+import java.net.URL;
 
 public class SidebarAdmin {
 
@@ -14,21 +16,48 @@ public class SidebarAdmin {
         sb.setPreferredSize(new Dimension(240, 0));
 
         // ── Logo ─────────────────────────────────────────
-        JPanel logoPanel = new JPanel(new BorderLayout());
+        JPanel logoPanel = new JPanel(new GridBagLayout());
         logoPanel.setBackground(C[1]);
-        logoPanel.setBorder(BorderFactory.createEmptyBorder(22, 20, 10, 20));
-        logoPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
+        logoPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        logoPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 140));
+        logoPanel.setMinimumSize(new Dimension(240, 140));
+        logoPanel.setPreferredSize(new Dimension(240, 140));
         logoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JPanel lt = new JPanel(new GridLayout(2, 1));
-        lt.setBackground(C[1]);
-        JLabel ln = new JLabel("Kampets");
-        ln.setFont(new Font("Arial", Font.BOLD, 22));
-        ln.setForeground(Color.WHITE);
-        JLabel ls = new JLabel("Panel administrativo");
-        ls.setFont(new Font("Arial", Font.PLAIN, 12));
-        ls.setForeground(C[11]);
-        lt.add(ln); lt.add(ls);
-        logoPanel.add(lt, BorderLayout.CENTER);
+
+        JLabel logoLabel;
+        try {
+            URL imgUrl = SidebarAdmin.class.getClassLoader().getResource("logo.png");
+            if (imgUrl != null) {
+                ImageIcon rawIcon = new ImageIcon(imgUrl);
+                Image rawImg = rawIcon.getImage();
+                int targetW = 240;
+                int targetH = 140;
+                int origW = rawIcon.getIconWidth();
+                int origH = rawIcon.getIconHeight();
+                if (origW > 0 && origH > 0) {
+                    double ratio = Math.min((double) targetW / origW, (double) targetH / origH);
+                    targetW = (int)(origW * ratio);
+                    targetH = (int)(origH * ratio);
+                }
+                BufferedImage scaled = new BufferedImage(targetW, targetH, BufferedImage.TYPE_INT_ARGB);
+                Graphics2D g2 = scaled.createGraphics();
+                g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+                g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.drawImage(rawImg, 0, 0, targetW, targetH, null);
+                g2.dispose();
+                logoLabel = new JLabel(new ImageIcon(scaled));
+            } else {
+                logoLabel = new JLabel("Kampets");
+                logoLabel.setFont(new Font("Arial", Font.BOLD, 22));
+                logoLabel.setForeground(Color.WHITE);
+            }
+        } catch (Exception ex) {
+            logoLabel = new JLabel("Kampets");
+            logoLabel.setFont(new Font("Arial", Font.BOLD, 22));
+            logoLabel.setForeground(Color.WHITE);
+        }
+        logoPanel.add(logoLabel);
         sb.add(logoPanel);
         agregarSep(sb, C);
 

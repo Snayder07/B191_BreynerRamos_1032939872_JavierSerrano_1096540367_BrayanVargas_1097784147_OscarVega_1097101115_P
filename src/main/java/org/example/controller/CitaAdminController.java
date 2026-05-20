@@ -55,12 +55,7 @@ public class CitaAdminController {
     }
 
     public void cancelarCita(Integer id, JPanel panel) {
-        try {
-            citaService.cancelarCita(id);
-            JOptionPane.showMessageDialog(panel, "Cita cancelada exitosamente.");
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(panel, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-        }
+        cambiarEstado(id, EstadoCita.CANCELADA, panel);
     }
 
     /**

@@ -72,15 +72,31 @@ public class PanelMisMascotas {
         JPanel sb = new JPanel();
         sb.setLayout(new BoxLayout(sb, BoxLayout.Y_AXIS));
         sb.setBackground(C[1]); sb.setPreferredSize(new Dimension(240,0));
-        sb.setBorder(BorderFactory.createEmptyBorder(20,12,20,12));
+        sb.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
 
-        JLabel logo;
-        try {
-            ImageIcon ic = new ImageIcon(getClass().getResource("/logo.png"));
-            logo = new JLabel(new ImageIcon(ic.getImage().getScaledInstance(160,55,Image.SCALE_SMOOTH)));
-        } catch (Exception e) { logo = lbl("Kampets",18,Font.BOLD,C[5]); }
-        logo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        sb.add(logo); sb.add(Box.createVerticalStrut(16));
+        JPanel logoPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                try {
+                    java.net.URL imgUrl = getClass().getClassLoader().getResource("logo_cliente.png");
+                    if (imgUrl != null) {
+                        Graphics2D g2 = (Graphics2D) g.create();
+                        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+                        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                        g2.drawImage(new ImageIcon(imgUrl).getImage(), 0, 0, getWidth(), getHeight(), this);
+                        g2.dispose();
+                    }
+                } catch (Exception ignored) {}
+            }
+        };
+        logoPanel.setBackground(C[1]);
+        logoPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 140));
+        logoPanel.setMinimumSize(new Dimension(240, 140));
+        logoPanel.setPreferredSize(new Dimension(240, 140));
+        logoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        sb.add(logoPanel);
         agregarSep(sb);
 
         agregarSeccion(sb, "PRINCIPAL");
@@ -224,7 +240,7 @@ public class PanelMisMascotas {
                 JPanel der = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
                 der.setBackground(C[2]);
 
-                JButton btnEditar = new JButton("✏ Editar");
+                JButton btnEditar = new JButton(" Editar");
                 btnEditar.setFont(new Font("Arial", Font.PLAIN, 11));
                 btnEditar.setBackground(C[1]);
                 btnEditar.setForeground(Color.WHITE);
