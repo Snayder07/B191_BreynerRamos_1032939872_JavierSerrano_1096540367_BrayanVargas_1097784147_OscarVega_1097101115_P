@@ -291,11 +291,21 @@ public class PanelVacunas {
             lista.add(Box.createVerticalStrut(30));
             lista.add(sinVac);
         } else {
+            List<Control_vacunas> necesitanAtencion = new ArrayList<>();
+            for (Control_vacunas cv : vacunasMascota) {
+                String est = cv.getEstado();
+                if ("Vencida".equals(est) || "Próxima".equals(est)) necesitanAtencion.add(cv);
+            }
+            if (!necesitanAtencion.isEmpty()) {
+                lista.add(crearBannerVacunas(necesitanAtencion));
+                lista.add(Box.createVerticalStrut(14));
+            }
+
             for (Control_vacunas cv : vacunasMascota) {
                 String nombreVac  = cv.getVacuna() != null ? cv.getVacuna().getNombre() : "—";
                 String fechaAplic = cv.getFechaAplicacion() != null ? cv.getFechaAplicacion().format(FMT) : "—";
                 String proxDosis  = cv.getProximaDosis()    != null ? cv.getProximaDosis().format(FMT)    : "Sin próxima dosis";
-                String estado     = vacunaService.calcularEstado(cv.getProximaDosis());
+                String estado     = cv.getEstado();
 
                 Color estadoColor;
                 switch (estado) {
@@ -335,6 +345,63 @@ public class PanelVacunas {
         cuerpo.add(vacunasPanel, BorderLayout.CENTER);
         contenido.add(cuerpo, BorderLayout.CENTER);
         return contenido;
+    }
+
+    private JPanel crearBannerVacunas(List<Control_vacunas> pendientes) {
+        Color bgBanner  = temaOscuro ? new Color(50, 30, 10)   : new Color(255, 247, 237);
+        Color borde     = new Color(234, 88, 12);
+        Color tituloCol = temaOscuro ? new Color(251, 146, 60) : new Color(154, 52, 18);
+
+        JPanel banner = new JPanel(new BorderLayout(0, 6));
+        banner.setBackground(bgBanner);
+        banner.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 4, 0, 0, borde),
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(borde, 1),
+                        BorderFactory.createEmptyBorder(14, 18, 14, 18))));
+        banner.setAlignmentX(Component.LEFT_ALIGNMENT);
+        banner.setMaximumSize(new Dimension(Integer.MAX_VALUE, 999));
+
+        JLabel titulo = new JLabel("⚠ Vacunas que requieren atención");
+        titulo.setFont(new Font("Arial", Font.BOLD, 14));
+        titulo.setForeground(tituloCol);
+
+        JPanel listaVac = new JPanel();
+        listaVac.setLayout(new BoxLayout(listaVac, BoxLayout.Y_AXIS));
+        listaVac.setBackground(bgBanner);
+        listaVac.setBorder(BorderFactory.createEmptyBorder(6, 0, 6, 0));
+        for (Control_vacunas cv : pendientes) {
+            String nombre = cv.getVacuna() != null ? cv.getVacuna().getNombre() : "Vacuna";
+            String estado = cv.getEstado();
+            String prox   = cv.getProximaDosis() != null
+                    ? "  —  Próxima dosis: " + cv.getProximaDosis().format(FMT) : "";
+            Color c = "Vencida".equals(estado) ? new Color(220, 38, 38) : new Color(234, 88, 12);
+            JLabel l = new JLabel("• " + nombre + "  [" + estado + "]" + prox);
+            l.setFont(new Font("Arial", Font.PLAIN, 12));
+            l.setForeground(c);
+            l.setAlignmentX(Component.LEFT_ALIGNMENT);
+            listaVac.add(l);
+            listaVac.add(Box.createVerticalStrut(3));
+        }
+
+        JButton btnAgendar = new JButton("Agendar cita de vacunación");
+        btnAgendar.setFont(new Font("Arial", Font.BOLD, 12));
+        btnAgendar.setBackground(borde);
+        btnAgendar.setForeground(Color.WHITE);
+        btnAgendar.setOpaque(true); btnAgendar.setBorderPainted(false);
+        btnAgendar.setBorder(BorderFactory.createEmptyBorder(7, 16, 7, 16));
+        btnAgendar.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
+        btnAgendar.addActionListener(e -> Main.cambiarPantalla("agendarCita"));
+        btnAgendar.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JPanel botones = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 4));
+        botones.setBackground(bgBanner);
+        botones.add(btnAgendar);
+
+        banner.add(titulo,   BorderLayout.NORTH);
+        banner.add(listaVac, BorderLayout.CENTER);
+        banner.add(botones,  BorderLayout.SOUTH);
+        return banner;
     }
 
     private void agregarSeccion(JPanel p, String t) {

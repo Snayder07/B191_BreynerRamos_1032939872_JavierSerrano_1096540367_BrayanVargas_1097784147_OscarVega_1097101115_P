@@ -1,6 +1,7 @@
 package org.example.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.Formula;
 import java.time.LocalDate;
 
 @Entity
@@ -25,6 +26,9 @@ public class Control_vacunas {
     @Column(name = "proxima_dosis")
     private LocalDate proximaDosis;
 
+    @Formula("fn_estado_vacuna(proxima_dosis)")
+    private String estado;
+
     public Control_vacunas() {}
 
     public Integer getId() { return id; }
@@ -41,4 +45,6 @@ public class Control_vacunas {
 
     public LocalDate getProximaDosis() { return proximaDosis; }
     public void setProximaDosis(LocalDate proximaDosis) { this.proximaDosis = proximaDosis; }
+
+    public String getEstado() { return estado != null ? estado : "Al día"; }
 }

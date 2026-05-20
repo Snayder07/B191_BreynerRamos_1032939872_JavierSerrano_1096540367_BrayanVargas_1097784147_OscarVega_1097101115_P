@@ -54,6 +54,14 @@ public class CitaAdminController {
         }
     }
 
+    public List<Citas> listarCitasVacunas() {
+        try {
+            return citaService.listarCitasVacunas();
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
+    }
+
     public void cancelarCita(Integer id, JPanel panel) {
         cambiarEstado(id, EstadoCita.CANCELADA, panel);
     }

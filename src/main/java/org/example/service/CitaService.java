@@ -37,6 +37,10 @@ public class CitaService {
         return repositorio.buscarDeHoy();
     }
 
+    public List<Citas> listarCitasVacunas() {
+        return repositorio.buscarCitasVacunas();
+    }
+
     // ─────────────────────────────────────────────────────────
     // BUSCAR CITA POR ID
     // ─────────────────────────────────────────────────────────

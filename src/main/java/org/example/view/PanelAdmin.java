@@ -1,9 +1,13 @@
 package org.example.view;
 
+import com.toedter.calendar.JDateChooser;
 import org.example.controller.CitaAdminController;
+import org.example.controller.VacunaAdminController;
 import org.example.model.Citas;
 import org.example.model.Control_vacunas;
-import org.example.service.ControlVacunaService;
+import org.example.model.EstadoCita;
+import org.example.model.Mascotas;
+import org.example.model.Vacunas;
 import org.example.service.EmpleadoService;
 
 import javax.swing.*;
@@ -13,8 +17,8 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -23,9 +27,12 @@ public class PanelAdmin {
     public JPanel panel;
     private boolean temaOscuro = false;
 
-    private final EmpleadoService      empleadoService  = new EmpleadoService();
-    private final CitaAdminController  citaCtrl         = new CitaAdminController();
-    private final ControlVacunaService vacunaService    = new ControlVacunaService();
+    private final EmpleadoService        empleadoService  = new EmpleadoService();
+    private final CitaAdminController    citaCtrl         = new CitaAdminController();
+    private final VacunaAdminController  vacunaCtrl       = new VacunaAdminController();
+
+    private List<Citas> cachedCitasHoy      = null;
+    private List<Citas> cachedCitasVacunas  = null;
 
     private final Color[] CLARO = {
             new Color(240,253,244), new Color(22,101,52),   Color.WHITE,
@@ -45,14 +52,44 @@ public class PanelAdmin {
 
     public PanelAdmin() { panel = new JPanel(new BorderLayout()); construir(); }
     public void setTema(boolean o) { if (o != temaOscuro) { temaOscuro = o; construir(); } }
-    public void recargar() { construir(); }
+    public void recargar() { cachedCitasHoy = null; cachedCitasVacunas = null; construir(); }
 
     private void construir() {
         panel.removeAll(); C = temaOscuro ? OSCURO : CLARO;
         panel.setBackground(C[0]);
         panel.add(SidebarAdmin.crear(C, temaOscuro, "panelAdmin", panel), BorderLayout.WEST);
-        panel.add(crearContenido(), BorderLayout.CENTER);
+
+        if (cachedCitasHoy != null && cachedCitasVacunas != null) {
+            panel.add(crearContenido(), BorderLayout.CENTER);
+            panel.revalidate(); panel.repaint();
+            return;
+        }
+
+        JPanel cargando = new JPanel(new BorderLayout());
+        cargando.setBackground(C[0]);
+        JLabel lCargando = new JLabel("Cargando...", SwingConstants.CENTER);
+        lCargando.setFont(new Font("Arial", Font.PLAIN, 16));
+        lCargando.setForeground(C[7]);
+        cargando.add(lCargando, BorderLayout.CENTER);
+        panel.add(cargando, BorderLayout.CENTER);
         panel.revalidate(); panel.repaint();
+
+        new SwingWorker<Void, Void>() {
+            private List<Citas> hoy;
+            private List<Citas> vacunas;
+            @Override protected Void doInBackground() {
+                hoy     = citaCtrl.listarDeHoy();
+                vacunas = citaCtrl.listarCitasVacunas();
+                return null;
+            }
+            @Override protected void done() {
+                cachedCitasHoy     = hoy     != null ? hoy     : Collections.emptyList();
+                cachedCitasVacunas = vacunas != null ? vacunas : Collections.emptyList();
+                panel.remove(cargando);
+                panel.add(crearContenido(), BorderLayout.CENTER);
+                panel.revalidate(); panel.repaint();
+            }
+        }.execute();
     }
 
     private JLabel lbl(String t, int sz, int st, Color c) {
@@ -138,7 +175,6 @@ public class PanelAdmin {
         form.add(titulo); form.add(Box.createVerticalStrut(4)); form.add(sub);
         form.add(Box.createVerticalStrut(20));
 
-        // Nombre
         JLabel lNombre = lbl("Nombre", 12, Font.BOLD, C[6]);
         lNombre.setAlignmentX(Component.LEFT_ALIGNMENT);
         form.add(lNombre); form.add(Box.createVerticalStrut(6));
@@ -149,7 +185,6 @@ public class PanelAdmin {
                 BorderFactory.createLineBorder(C[9], 1), BorderFactory.createEmptyBorder(6,10,6,10)));
         form.add(tfNombre); form.add(Box.createVerticalStrut(12));
 
-        // Apellido
         JLabel lApellido = lbl("Apellido", 12, Font.BOLD, C[6]);
         lApellido.setAlignmentX(Component.LEFT_ALIGNMENT);
         form.add(lApellido); form.add(Box.createVerticalStrut(6));
@@ -160,7 +195,6 @@ public class PanelAdmin {
                 BorderFactory.createLineBorder(C[9], 1), BorderFactory.createEmptyBorder(6,10,6,10)));
         form.add(tfApellido); form.add(Box.createVerticalStrut(12));
 
-        // Correo
         JLabel lCorreo = lbl("Correo electrónico", 12, Font.BOLD, C[6]);
         lCorreo.setAlignmentX(Component.LEFT_ALIGNMENT);
         form.add(lCorreo); form.add(Box.createVerticalStrut(6));
@@ -171,7 +205,6 @@ public class PanelAdmin {
                 BorderFactory.createLineBorder(C[9], 1), BorderFactory.createEmptyBorder(6,10,6,10)));
         form.add(tfCorreo); form.add(Box.createVerticalStrut(12));
 
-        // Contraseña
         JLabel lPass = lbl("Contraseña", 12, Font.BOLD, C[6]);
         lPass.setAlignmentX(Component.LEFT_ALIGNMENT);
         form.add(lPass); form.add(Box.createVerticalStrut(6));
@@ -179,7 +212,6 @@ public class PanelAdmin {
         tfPass.setFont(new Font("Arial", Font.PLAIN, 13));
         tfPass.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(C[9], 1), BorderFactory.createEmptyBorder(6,10,6,36)));
-        // Wrapper con ojo superpuesto
         JPanel wrapPass = new JPanel(null);
         wrapPass.setOpaque(false);
         wrapPass.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -209,7 +241,7 @@ public class PanelAdmin {
         btnOjoAdmin.addActionListener(ev -> {
             boolean oculto = (Boolean) btnOjoAdmin.getClientProperty("oculto");
             if (oculto) { tfPass.setEchoChar((char)0); btnOjoAdmin.putClientProperty("oculto", Boolean.FALSE); }
-            else { tfPass.setEchoChar('\u2022'); btnOjoAdmin.putClientProperty("oculto", Boolean.TRUE); }
+            else { tfPass.setEchoChar('•'); btnOjoAdmin.putClientProperty("oculto", Boolean.TRUE); }
             btnOjoAdmin.repaint();
         });
         wrapPass.addComponentListener(new java.awt.event.ComponentAdapter() {
@@ -222,7 +254,6 @@ public class PanelAdmin {
         wrapPass.add(btnOjoAdmin);
         form.add(wrapPass); form.add(Box.createVerticalStrut(12));
 
-        // Cargo
         JLabel lCargo = lbl("Cargo", 12, Font.BOLD, C[6]);
         lCargo.setAlignmentX(Component.LEFT_ALIGNMENT);
         form.add(lCargo); form.add(Box.createVerticalStrut(6));
@@ -233,7 +264,6 @@ public class PanelAdmin {
         cbCargo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
         form.add(cbCargo); form.add(Box.createVerticalStrut(24));
 
-        // Botones
         JPanel bots = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         bots.setBackground(C[2]); bots.setAlignmentX(Component.LEFT_ALIGNMENT);
         bots.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
@@ -262,7 +292,7 @@ public class PanelAdmin {
                 if (nombre.isEmpty() || correo.isEmpty() || pass.isEmpty()) {
                     JOptionPane.showMessageDialog(dlg,
                             "Todos los campos son obligatorios.",
-                            "Campos vac\u00edos", JOptionPane.WARNING_MESSAGE);
+                            "Campos vacíos", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
                 try {
@@ -299,22 +329,18 @@ public class PanelAdmin {
     }
 
     private JPanel crearFilaStats() {
-        // Datos reales de BD
-        List<Citas> citasHoy;
-        List<Control_vacunas> todasVacunas;
-        try { citasHoy      = citaCtrl.listarDeHoy();           } catch (Exception e) { citasHoy      = Collections.emptyList(); }
-        try { todasVacunas  = vacunaService.listarTodas();      } catch (Exception e) { todasVacunas  = Collections.emptyList(); }
+        List<Citas> citasHoy      = cachedCitasHoy      != null ? cachedCitasHoy      : Collections.emptyList();
+        List<Citas> citasVacunas  = cachedCitasVacunas  != null ? cachedCitasVacunas  : Collections.emptyList();
 
-        long pendientes = todasVacunas.stream().filter(cv -> {
-            String est = vacunaService.calcularEstado(cv.getProximaDosis());
-            return est.equals("Vencida") || est.equals("Próxima");
-        }).count();
+        long pendientesVac = citasVacunas.stream().filter(c ->
+            c.getEstadoCita() == EstadoCita.PENDIENTE || c.getEstadoCita() == EstadoCita.CONFIRMADA
+        ).count();
 
         JPanel fila = new JPanel(new GridLayout(1,2,16,0));
         fila.setBackground(C[0]);
         Object[][] stats = {
-                {"Citas hoy",         String.valueOf(citasHoy.size()),  "Programadas para hoy",  C[13]},
-                {"Vacunas pendientes", String.valueOf(pendientes),       "Vencidas o próximas",   C[8]},
+                {"Citas hoy",               String.valueOf(citasHoy.size()),    "Programadas para hoy",       C[13]},
+                {"Vacunaciones pendientes",  String.valueOf(pendientesVac),      "Citas de vacunación activas", C[8]},
         };
         for (Object[] s : stats) {
             JPanel card = new JPanel(new BorderLayout(0,6));
@@ -342,9 +368,7 @@ public class PanelAdmin {
         });
         header.add(titulo,BorderLayout.WEST); header.add(verTodas,BorderLayout.EAST);
 
-        // Datos reales desde BD
-        List<Citas> citasHoy;
-        try { citasHoy = citaCtrl.listarDeHoy(); } catch (Exception ex) { citasHoy = Collections.emptyList(); }
+        List<Citas> citasHoy = cachedCitasHoy != null ? cachedCitasHoy : Collections.emptyList();
 
         String[] cols = {"Cliente/Mascota","Hora","Vet","Estado"};
         Object[][] datos;
@@ -361,9 +385,9 @@ public class PanelAdmin {
                         ? partes[0] + " " + partes[1].charAt(0) + "."
                         : clienteNombre;
                 String mascotaNombre = c.getMascota() != null ? c.getMascota().getNombre() : "—";
-                String hora   = c.getHoraCita()   != null ? c.getHoraCita().toString()                     : "—";
-                String vet    = c.getEmpleado()   != null ? c.getEmpleado().getNombre()                    : "—";
-                String estado = c.getEstadoCita() != null ? c.getEstadoCita().toString()                   : "—";
+                String hora   = c.getHoraCita()   != null ? c.getHoraCita().toString()   : "—";
+                String vet    = c.getEmpleado()   != null ? c.getEmpleado().getNombre()  : "—";
+                String estado = c.getEstadoCita() != null ? c.getEstadoCita().toString() : "—";
                 datos[i] = new Object[]{clienteCorto + " – " + mascotaNombre, hora, vet, estado};
             }
         }
@@ -378,46 +402,207 @@ public class PanelAdmin {
     private JPanel crearTablaVacunas() {
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(C[2]); header.setBorder(BorderFactory.createEmptyBorder(16,20,14,20));
-        JLabel titulo = lbl("Vacunas pendientes",15,Font.BOLD,C[6]);
-        JButton verTodas = btn("Ver todas",C[4],C[1]);
-        verTodas.setBorder(BorderFactory.createEmptyBorder(6,14,6,14));
-        verTodas.setFont(new Font("Arial",Font.PLAIN,12));
-        verTodas.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) { Main.cambiarPantalla("adminVacunas"); }
-        });
-        header.add(titulo,BorderLayout.WEST); header.add(verTodas,BorderLayout.EAST);
+        JLabel titulo = lbl("Citas de vacunación", 15, Font.BOLD, C[6]);
+        JButton gestionar = btn("Gestionar vacunas", C[4], C[1]);
+        gestionar.setBorder(BorderFactory.createEmptyBorder(6,14,6,14));
+        gestionar.setFont(new Font("Arial", Font.PLAIN, 12));
+        gestionar.addActionListener(e -> Main.cambiarPantalla("adminVacunas"));
+        header.add(titulo, BorderLayout.WEST); header.add(gestionar, BorderLayout.EAST);
 
-        // Datos reales desde BD — solo Vencidas o Próximas
-        List<Control_vacunas> todas;
-        try { todas = vacunaService.listarTodas(); } catch (Exception ex) { todas = Collections.emptyList(); }
-
+        final List<Citas> citasVac = cachedCitasVacunas != null ? cachedCitasVacunas : Collections.emptyList();
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd MMM yyyy", new Locale("es"));
-        List<Object[]> filas = new ArrayList<>();
-        for (Control_vacunas cv : todas) {
-            String estado = vacunaService.calcularEstado(cv.getProximaDosis());
-            if (!estado.equals("Vencida") && !estado.equals("Próxima")) continue;
-            String mascota = cv.getMascota() != null ? cv.getMascota().getNombre() : "—";
-            String duenio  = cv.getMascota() != null && cv.getMascota().getCliente() != null
-                    ? cv.getMascota().getCliente().getNombre() : "—";
-            String tipo    = cv.getVacuna()  != null ? cv.getVacuna().getNombre()  : "—";
-            String ultima  = cv.getFechaAplicacion() != null ? cv.getFechaAplicacion().format(fmt)  : "—";
-            String proxima = cv.getProximaDosis()    != null ? cv.getProximaDosis().format(fmt)      : "—";
-            filas.add(new Object[]{mascota, duenio, tipo, ultima, proxima, estado});
+
+        String[] cols = {"Mascota", "Dueño", "Fecha", "Hora", "Estado", "Registrar"};
+        Object[][] datos;
+        if (citasVac.isEmpty()) {
+            datos = new Object[][]{{"Sin citas de vacunación", "—", "—", "—", "—", ""}};
+        } else {
+            datos = new Object[citasVac.size()][6];
+            for (int i = 0; i < citasVac.size(); i++) {
+                Citas c = citasVac.get(i);
+                String mascota = c.getMascota() != null ? c.getMascota().getNombre() : "—";
+                String duenio  = c.getMascota() != null && c.getMascota().getCliente() != null
+                        ? c.getMascota().getCliente().getNombre() : "—";
+                String fecha   = c.getFechaCita() != null ? c.getFechaCita().format(fmt) : "—";
+                String hora    = c.getHoraCita()  != null ? c.getHoraCita().toString().substring(0, 5) : "—";
+                String estado  = c.getEstadoCita() != null ? c.getEstadoCita().name() : "—";
+                datos[i] = new Object[]{mascota, duenio, fecha, hora, estado, "Registrar vacuna"};
+            }
         }
 
-        String[] cols = {"Mascota","Dueño","Tipo de vacuna","Última aplicación","Próxima fecha","Estado"};
-        Object[][] datos = filas.isEmpty()
-                ? new Object[][]{{"Sin vacunas pendientes","—","—","—","—","—"}}
-                : filas.toArray(new Object[0][]);
+        DefaultTableModel modelo = new DefaultTableModel(datos, cols) {
+            public boolean isCellEditable(int r, int c) { return false; }
+        };
+        JTable tabla = new JTable(modelo);
+        tabla.setBackground(C[2]); tabla.setForeground(C[6]);
+        tabla.setFont(new Font("Arial", Font.PLAIN, 13)); tabla.setRowHeight(40);
+        tabla.setShowGrid(false); tabla.setIntercellSpacing(new Dimension(0,0));
+        tabla.setSelectionBackground(C[3]); tabla.setFillsViewportHeight(true);
 
-        JTable tabla = construirTabla(cols, datos, 5);
-        int[] anchos = {90,160,140,130,130,100};
-        for (int i=0;i<anchos.length;i++) tabla.getColumnModel().getColumn(i).setPreferredWidth(anchos[i]);
-        tabla.setRowHeight(40);
+        JTableHeader th = tabla.getTableHeader();
+        th.setBackground(C[14]); th.setForeground(temaOscuro ? C[7] : C[1]);
+        th.setFont(new Font("Arial", Font.BOLD, 11)); th.setReorderingAllowed(false);
+        th.setPreferredSize(new Dimension(0, 36));
+
+        int[] anchos = {100, 150, 110, 60, 110, 140};
+        for (int i = 0; i < anchos.length; i++) tabla.getColumnModel().getColumn(i).setPreferredWidth(anchos[i]);
+
+        // Estado renderer
+        tabla.getColumnModel().getColumn(4).setCellRenderer(new DefaultTableCellRenderer() {
+            public Component getTableCellRendererComponent(JTable t, Object v, boolean s, boolean f, int r, int col) {
+                JLabel l = (JLabel) super.getTableCellRendererComponent(t, v, s, f, r, col);
+                l.setFont(new Font("Arial", Font.BOLD, 12)); l.setHorizontalAlignment(SwingConstants.CENTER);
+                switch (v == null ? "" : v.toString()) {
+                    case "CONFIRMADA": l.setForeground(C[13]); break;
+                    case "PENDIENTE":  l.setForeground(C[8]);  break;
+                    case "CANCELADA":  l.setForeground(C[12]); break;
+                    default:           l.setForeground(C[7]);
+                }
+                l.setBackground(s ? C[3] : (r%2==0 ? C[2] : C[4])); l.setOpaque(true); return l;
+            }
+        });
+
+        // "Registrar vacuna" button renderer
+        tabla.getColumnModel().getColumn(5).setCellRenderer(new DefaultTableCellRenderer() {
+            public Component getTableCellRendererComponent(JTable t, Object v, boolean s, boolean f, int r, int col) {
+                JLabel l = (JLabel) super.getTableCellRendererComponent(t, v, s, f, r, col);
+                String val = v != null ? v.toString() : "";
+                if (!val.isEmpty()) {
+                    l.setText("+ Registrar vacuna");
+                    l.setFont(new Font("Arial", Font.BOLD, 11));
+                    l.setForeground(C[13]);
+                    l.setHorizontalAlignment(SwingConstants.CENTER);
+                    l.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(C[13], 1),
+                            BorderFactory.createEmptyBorder(4, 8, 4, 8)));
+                }
+                l.setBackground(s ? C[3] : (r%2==0 ? C[2] : C[4])); l.setOpaque(true); return l;
+            }
+        });
+
+        // Base renderer for text columns
+        DefaultTableCellRenderer base = new DefaultTableCellRenderer() {
+            public Component getTableCellRendererComponent(JTable t, Object v, boolean s, boolean f, int r, int col) {
+                super.getTableCellRendererComponent(t, v, s, f, r, col);
+                setForeground(C[6]); setFont(new Font("Arial", Font.PLAIN, 13));
+                setBackground(r%2==0 ? C[2] : C[4]);
+                if (s) setBackground(C[3]); setOpaque(true);
+                setBorder(BorderFactory.createEmptyBorder(0, 14, 0, 14)); return this;
+            }
+        };
+        for (int i = 0; i < 4; i++) tabla.getColumnModel().getColumn(i).setCellRenderer(base);
+
+        // Click on "Registrar vacuna" column
+        tabla.addMouseListener(new MouseAdapter() {
+            public void mouseClicked(MouseEvent e) {
+                int row = tabla.rowAtPoint(e.getPoint());
+                int col = tabla.columnAtPoint(e.getPoint());
+                if (row >= 0 && col == 5 && row < citasVac.size()) {
+                    Citas cita = citasVac.get(row);
+                    if (cita.getMascota() != null) {
+                        abrirFormRegistrarVacuna(cita.getMascota());
+                    }
+                }
+            }
+        });
+
         JScrollPane sp = new JScrollPane(tabla); sp.setBorder(null); sp.getViewport().setBackground(C[2]);
         JPanel wrapper = new JPanel(new BorderLayout()); wrapper.setBackground(C[2]);
-        wrapper.add(header,BorderLayout.NORTH); wrapper.add(sp,BorderLayout.CENTER);
+        wrapper.add(header, BorderLayout.NORTH); wrapper.add(sp, BorderLayout.CENTER);
         return wrapper;
+    }
+
+    private void abrirFormRegistrarVacuna(Mascotas mascota) {
+        Window owner = SwingUtilities.getWindowAncestor(panel);
+        JDialog dialog = new JDialog(owner, "Registrar vacuna",
+                Dialog.ModalityType.APPLICATION_MODAL);
+        dialog.setSize(500, 360);
+        dialog.setLocationRelativeTo(panel);
+        dialog.setResizable(false);
+
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setBackground(C[2]);
+        form.setBorder(BorderFactory.createEmptyBorder(24, 28, 20, 28));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(7, 6, 7, 6);
+
+        List<Vacunas> vacunas = vacunaCtrl.listarVacunas();
+
+        String nombreMascota = mascota.getNombre()
+                + (mascota.getCliente() != null ? " (" + mascota.getCliente().getNombre() + ")" : "");
+        JLabel lblMascota = lbl(nombreMascota, 13, Font.PLAIN, C[6]);
+
+        JComboBox<Vacunas> cmbVacuna = new JComboBox<>(vacunas.toArray(new Vacunas[0]));
+        cmbVacuna.setRenderer(new DefaultListCellRenderer() {
+            public Component getListCellRendererComponent(JList<?> list, Object v, int idx, boolean sel, boolean focus) {
+                super.getListCellRendererComponent(list, v, idx, sel, focus);
+                if (v instanceof Vacunas) setText(((Vacunas) v).getNombre());
+                return this;
+            }
+        });
+
+        JDateChooser dtAplic = new JDateChooser(); dtAplic.setDateFormatString("dd/MM/yyyy");
+        JDateChooser dtProx  = new JDateChooser(); dtProx.setDateFormatString("dd/MM/yyyy");
+
+        Object[][] filas = {
+            {"Mascota:",          lblMascota},
+            {"Vacuna:",           cmbVacuna},
+            {"Fecha aplicación:", dtAplic},
+            {"Próxima dosis:",    dtProx},
+        };
+        for (int i = 0; i < filas.length; i++) {
+            gbc.gridx = 0; gbc.gridy = i; gbc.weightx = 0.3;
+            form.add(lbl((String) filas[i][0], 12, Font.PLAIN, C[6]), gbc);
+            gbc.gridx = 1; gbc.weightx = 0.7;
+            form.add((Component) filas[i][1], gbc);
+        }
+        gbc.gridx = 1; gbc.gridy = filas.length; gbc.weightx = 0.7;
+        form.add(lbl("* Próxima dosis es opcional", 10, Font.PLAIN, C[7]), gbc);
+
+        JPanel btns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 4));
+        btns.setBackground(C[2]);
+
+        JButton btnCancelar = new JButton("Cancelar");
+        btnCancelar.setFont(new Font("Arial", Font.PLAIN, 13));
+        btnCancelar.setBackground(C[2]); btnCancelar.setForeground(C[6]);
+        btnCancelar.setOpaque(true); btnCancelar.setFocusPainted(false);
+        btnCancelar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(C[9], 1),
+                BorderFactory.createEmptyBorder(7, 14, 7, 14)));
+        btnCancelar.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
+        btnCancelar.addActionListener(e -> dialog.dispose());
+
+        JButton btnGuardar = btn("Guardar", new Color(22, 163, 74), Color.WHITE);
+        btnGuardar.setBorder(BorderFactory.createEmptyBorder(9, 18, 9, 18));
+        btnGuardar.addActionListener(e -> {
+            Vacunas vacSel = (Vacunas) cmbVacuna.getSelectedItem();
+            java.util.Date dAplic = dtAplic.getDate();
+            java.util.Date dProx  = dtProx.getDate();
+
+            if (vacSel == null) { JOptionPane.showMessageDialog(dialog, "Seleccione una vacuna."); return; }
+            if (dAplic == null) { JOptionPane.showMessageDialog(dialog, "La fecha de aplicación es obligatoria."); return; }
+
+            Control_vacunas cv = new Control_vacunas();
+            cv.setMascota(mascota);
+            cv.setVacuna(vacSel);
+            cv.setFechaAplicacion(dAplic.toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
+            cv.setProximaDosis(dProx != null ? dProx.toInstant().atZone(ZoneId.systemDefault()).toLocalDate() : null);
+            try {
+                vacunaCtrl.guardar(cv);
+                JOptionPane.showMessageDialog(dialog, "Vacuna registrada correctamente.");
+                dialog.dispose();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dialog, "Error al guardar: " + ex.getMessage());
+            }
+        });
+        btns.add(btnCancelar); btns.add(btnGuardar);
+
+        gbc.gridx = 0; gbc.gridy = filas.length + 1; gbc.gridwidth = 2; gbc.weightx = 1.0;
+        form.add(btns, gbc);
+
+        dialog.add(form);
+        dialog.setVisible(true);
     }
 
     private JTable construirTabla(String[] cols, Object[][] datos, int colEstado) {
@@ -467,26 +652,25 @@ public class PanelAdmin {
         if (chooser.showSaveDialog(panel) != JFileChooser.APPROVE_OPTION) return;
 
         List<Citas> citasHoy;
-        List<Control_vacunas> todasVacunas;
-        try { citasHoy     = citaCtrl.listarDeHoy();      } catch (Exception e) { citasHoy     = Collections.emptyList(); }
-        try { todasVacunas = vacunaService.listarTodas(); } catch (Exception e) { todasVacunas = Collections.emptyList(); }
-        long pendientes = todasVacunas.stream().filter(cv -> {
-            String est = vacunaService.calcularEstado(cv.getProximaDosis());
-            return est.equals("Vencida") || est.equals("Próxima");
-        }).count();
+        List<Citas> citasVacunas;
+        try { citasHoy      = citaCtrl.listarDeHoy();          } catch (Exception e) { citasHoy      = Collections.emptyList(); }
+        try { citasVacunas  = citaCtrl.listarCitasVacunas();   } catch (Exception e) { citasVacunas  = Collections.emptyList(); }
+        long pendientes = citasVacunas.stream().filter(c ->
+            c.getEstadoCita() == EstadoCita.PENDIENTE || c.getEstadoCita() == EstadoCita.CONFIRMADA
+        ).count();
 
         try (PrintWriter pw = new PrintWriter(new FileWriter(chooser.getSelectedFile()))) {
             pw.println("       REPORTE KAMPETS VETERINARIA      ");
             pw.println("Fecha: " + LocalDate.now());
             pw.println(); pw.println("ESTADÍSTICAS DEL DÍA");
-            pw.println("  Citas hoy:           " + citasHoy.size());
-            pw.println("  Vacunas pendientes:  " + pendientes);
+            pw.println("  Citas hoy:                    " + citasHoy.size());
+            pw.println("  Vacunaciones pendientes:      " + pendientes);
             pw.println();
             if (!citasHoy.isEmpty()) {
                 pw.println("CITAS DE HOY:");
                 DateTimeFormatter fmt = DateTimeFormatter.ofPattern("HH:mm");
                 for (Citas c : citasHoy) {
-                    String mascota = c.getMascota() != null ? c.getMascota().getNombre() : "—";
+                    String mascota = c.getMascota()  != null ? c.getMascota().getNombre()  : "—";
                     String vet     = c.getEmpleado() != null ? c.getEmpleado().getNombre() : "—";
                     String hora    = c.getHoraCita() != null ? c.getHoraCita().format(fmt) : "—";
                     String estado  = c.getEstadoCita() != null ? c.getEstadoCita().toString() : "—";
@@ -494,7 +678,17 @@ public class PanelAdmin {
                 }
                 pw.println();
             }
-
+            if (!citasVacunas.isEmpty()) {
+                pw.println("CITAS DE VACUNACIÓN PENDIENTES:");
+                DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                for (Citas c : citasVacunas) {
+                    String mascota = c.getMascota() != null ? c.getMascota().getNombre() : "—";
+                    String fecha   = c.getFechaCita() != null ? c.getFechaCita().format(fmt) : "—";
+                    String estado  = c.getEstadoCita() != null ? c.getEstadoCita().toString() : "—";
+                    pw.println("  " + fecha + " | " + mascota + " | " + estado);
+                }
+                pw.println();
+            }
             pw.println("  Generado por Kampets · Sistema interno");
 
             JOptionPane.showMessageDialog(panel,"Reporte exportado:\n"+chooser.getSelectedFile().getAbsolutePath(),"Listo",JOptionPane.INFORMATION_MESSAGE);

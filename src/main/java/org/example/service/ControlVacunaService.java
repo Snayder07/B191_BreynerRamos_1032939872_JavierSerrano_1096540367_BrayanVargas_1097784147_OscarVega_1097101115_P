@@ -7,7 +7,6 @@ import org.example.model.Vacunas;
 import org.example.repository.ControlVacunaRepositoryImpl;
 import org.example.util.JPAUtil;
 
-import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 
@@ -64,13 +63,5 @@ public class ControlVacunaService {
     public void eliminar(Integer id) throws Exception {
         if (id == null) throw new Exception("ID de registro inválido.");
         repositorio.eliminar(id);
-    }
-
-    public String calcularEstado(LocalDate proximaDosis) {
-        if (proximaDosis == null) return "Al día";
-        LocalDate hoy = LocalDate.now();
-        if (proximaDosis.isBefore(hoy))              return "Vencida";
-        if (proximaDosis.isBefore(hoy.plusDays(30))) return "Próxima";
-        return "Al día";
     }
 }

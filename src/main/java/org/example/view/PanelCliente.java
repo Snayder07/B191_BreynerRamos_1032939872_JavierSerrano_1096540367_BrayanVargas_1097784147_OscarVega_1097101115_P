@@ -23,6 +23,7 @@ public class PanelCliente {
     private boolean temaOscuro = false;
 
     private final CitaAdminController ctrl = new CitaAdminController();
+    private List<Citas> cachedCitas = null;
 
     private final Color[] CLARO = {
             new Color(240, 246, 252), new Color(26,  74,  122), Color.WHITE,
@@ -49,16 +50,42 @@ public class PanelCliente {
         if (oscuro != temaOscuro) { temaOscuro = oscuro; construir(); }
     }
 
-    public void recargar() { construir(); }
+    public void recargar() { cachedCitas = null; construir(); }
 
     private void construir() {
         panel.removeAll();
         C = temaOscuro ? OSCURO : CLARO;
         panel.setBackground(C[0]);
-        panel.add(crearSidebar(),   BorderLayout.WEST);
-        panel.add(crearContenido(), BorderLayout.CENTER);
-        panel.revalidate();
-        panel.repaint();
+        panel.add(crearSidebar(), BorderLayout.WEST);
+
+        if (cachedCitas != null) {
+            panel.add(crearContenido(), BorderLayout.CENTER);
+            panel.revalidate(); panel.repaint();
+            return;
+        }
+
+        JPanel cargando = new JPanel(new BorderLayout());
+        cargando.setBackground(C[0]);
+        JLabel lCargando = new JLabel("Cargando citas...", SwingConstants.CENTER);
+        lCargando.setFont(new Font("Arial", Font.PLAIN, 15));
+        lCargando.setForeground(C[7]);
+        cargando.add(lCargando, BorderLayout.CENTER);
+        panel.add(cargando, BorderLayout.CENTER);
+        panel.revalidate(); panel.repaint();
+
+        new SwingWorker<List<Citas>, Void>() {
+            @Override protected List<Citas> doInBackground() {
+                if (Main.clienteActual == null) return Collections.emptyList();
+                return ctrl.listarPorCliente(Main.clienteActual.getId());
+            }
+            @Override protected void done() {
+                try { cachedCitas = get(); }
+                catch (Exception e) { cachedCitas = Collections.emptyList(); }
+                panel.remove(cargando);
+                panel.add(crearContenido(), BorderLayout.CENTER);
+                panel.revalidate(); panel.repaint();
+            }
+        }.execute();
     }
 
     private JButton crearBoton(String texto, Color fondo, Color textColor, boolean borde) {
@@ -282,9 +309,7 @@ public class PanelCliente {
         centro.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
 
         // Próxima cita
-        List<Citas> citas = Main.clienteActual != null
-                ? ctrl.listarPorCliente(Main.clienteActual.getId())
-                : Collections.emptyList();
+        List<Citas> citas = cachedCitas != null ? cachedCitas : Collections.emptyList();
         JPanel proximaCard = new JPanel(new BorderLayout());
         proximaCard.setBackground(C[1]);
         proximaCard.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
@@ -389,6 +414,7 @@ public class PanelCliente {
                                 "¿Cancelar esta cita?", "Confirmar", JOptionPane.YES_NO_OPTION);
                         if (conf == JOptionPane.YES_OPTION) {
                             ctrl.cancelarCita(idCita, panel);
+                            cachedCitas = null;
                             construir();
                         }
                     }

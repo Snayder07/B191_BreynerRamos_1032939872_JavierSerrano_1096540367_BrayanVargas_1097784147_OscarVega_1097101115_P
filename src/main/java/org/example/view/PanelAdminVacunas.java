@@ -5,7 +5,6 @@ import org.example.controller.VacunaAdminController;
 import org.example.model.Control_vacunas;
 import org.example.model.Mascotas;
 import org.example.model.Vacunas;
-import org.example.service.ControlVacunaService;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -25,7 +24,6 @@ public class PanelAdminVacunas {
     private List<Control_vacunas> lista = null;
 
     private final VacunaAdminController ctrl = new VacunaAdminController();
-    private final ControlVacunaService  svc  = new ControlVacunaService();
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
@@ -107,9 +105,9 @@ public class PanelAdminVacunas {
     }
 
     private JPanel crearContenido() {
-        long vencidas = lista.stream().filter(cv -> "Vencida".equals(svc.calcularEstado(cv.getProximaDosis()))).count();
-        long proximas = lista.stream().filter(cv -> "Próxima".equals(svc.calcularEstado(cv.getProximaDosis()))).count();
-        long alDia    = lista.stream().filter(cv -> "Al día" .equals(svc.calcularEstado(cv.getProximaDosis()))).count();
+        long vencidas = lista.stream().filter(cv -> "Vencida".equals(cv.getEstado())).count();
+        long proximas = lista.stream().filter(cv -> "Próxima".equals(cv.getEstado())).count();
+        long alDia    = lista.stream().filter(cv -> "Al día" .equals(cv.getEstado())).count();
 
         JPanel c = new JPanel(new BorderLayout()); c.setBackground(C[0]);
 
@@ -161,7 +159,7 @@ public class PanelAdminVacunas {
                 cv.getVacuna() != null ? cv.getVacuna().getNombre() : "—",
                 cv.getFechaAplicacion() != null ? cv.getFechaAplicacion().format(FMT) : "—",
                 cv.getProximaDosis()    != null ? cv.getProximaDosis().format(FMT)    : "—",
-                svc.calcularEstado(cv.getProximaDosis())
+                cv.getEstado()
             };
         }
 

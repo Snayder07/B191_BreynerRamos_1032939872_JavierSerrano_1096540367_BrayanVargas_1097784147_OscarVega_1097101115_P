@@ -38,8 +38,4 @@ public class VacunaAdminController {
     public void eliminar(Integer id) throws Exception {
         service.eliminar(id);
     }
-
-    public String calcularEstado(Control_vacunas cv) {
-        return service.calcularEstado(cv.getProximaDosis());
-    }
 }

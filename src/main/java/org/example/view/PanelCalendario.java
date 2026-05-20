@@ -28,6 +28,7 @@ public class PanelCalendario {
     private boolean temaOscuro = false;
 
     private final CitaService citaService = new CitaService();
+    private List<Citas> cachedTodas = null;
     private LocalDate semanaInicio = LocalDate.now().with(DayOfWeek.MONDAY);
 
     private static final int HORA_INICIO = 7;
@@ -91,7 +92,7 @@ public class PanelCalendario {
     public void setTema(boolean oscuro) {
         if (oscuro != temaOscuro) { temaOscuro = oscuro; construir(); }
     }
-    public void recargar() { construir(); }
+    public void recargar() { cachedTodas = null; construir(); }
 
     // ════════════════════════════════════════════════════════
     //  CONSTRUCCIÓN
@@ -101,9 +102,35 @@ public class PanelCalendario {
         C = temaOscuro ? OSCURO : CLARO;
         panel.setBackground(C[0]);
         panel.add(SidebarAdmin.crear(C, temaOscuro, "adminCalendario", panel), BorderLayout.WEST);
-        panel.add(crearContenido(), BorderLayout.CENTER);
-        panel.revalidate();
-        panel.repaint();
+
+        if (cachedTodas != null) {
+            panel.add(crearContenido(), BorderLayout.CENTER);
+            panel.revalidate(); panel.repaint();
+            return;
+        }
+
+        JPanel cargando = new JPanel(new BorderLayout());
+        cargando.setBackground(C[0]);
+        JLabel lCargando = new JLabel("Cargando calendario...", SwingConstants.CENTER);
+        lCargando.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        lCargando.setForeground(C[7]);
+        cargando.add(lCargando, BorderLayout.CENTER);
+        panel.add(cargando, BorderLayout.CENTER);
+        panel.revalidate(); panel.repaint();
+
+        new SwingWorker<List<Citas>, Void>() {
+            @Override protected List<Citas> doInBackground() {
+                try { return citaService.listarTodas(); }
+                catch (Exception e) { return Collections.emptyList(); }
+            }
+            @Override protected void done() {
+                try { cachedTodas = get(); }
+                catch (Exception e) { cachedTodas = Collections.emptyList(); }
+                panel.remove(cargando);
+                panel.add(crearContenido(), BorderLayout.CENTER);
+                panel.revalidate(); panel.repaint();
+            }
+        }.execute();
     }
 
     private JPanel crearContenido() {
@@ -365,7 +392,7 @@ public class PanelCalendario {
     // ════════════════════════════════════════════════════════
     private void cargarCitas() {
         panelBloques.removeAll(); citasPos.clear();
-        List<Citas> todas=citaService.listarTodas();
+        List<Citas> todas = cachedTodas != null ? cachedTodas : Collections.emptyList();
         LocalDate fin=semanaInicio.plusDays(DIAS-1);
         List<Citas> semana=new ArrayList<>();
         for (Citas c:todas){

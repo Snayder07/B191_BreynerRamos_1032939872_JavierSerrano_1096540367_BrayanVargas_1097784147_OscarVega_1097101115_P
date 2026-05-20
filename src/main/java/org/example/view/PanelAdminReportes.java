@@ -213,7 +213,7 @@ public class PanelAdminReportes {
             String vac   = cv.getVacuna() != null ? cv.getVacuna().getNombre() : "—";
             String fa    = cv.getFechaAplicacion() != null ? cv.getFechaAplicacion().format(FMT) : "—";
             String fp    = cv.getProximaDosis()     != null ? cv.getProximaDosis().format(FMT)  : "—";
-            String estado = vacunaSvc.calcularEstado(cv.getProximaDosis());
+            String estado = cv.getEstado();
             filas[i] = new Object[]{masc, dueno, vac, fa, fp, estado};
         }
         generarPDF(archivo, "REPORTE DE VACUNAS", cols, anchos, filas);
@@ -288,7 +288,7 @@ public class PanelAdminReportes {
         List<Productos>       prods    = invCtrl.listarTodos();
         long completadas = citas.stream().filter(ci -> EstadoCita.COMPLETADA.equals(ci.getEstadoCita())).count();
         long canceladas  = citas.stream().filter(ci -> EstadoCita.CANCELADA .equals(ci.getEstadoCita())).count();
-        long vencidas    = vacunas.stream().filter(cv -> "Vencida".equals(vacunaSvc.calcularEstado(cv.getProximaDosis()))).count();
+        long vencidas    = vacunas.stream().filter(cv -> "Vencida".equals(cv.getEstado())).count();
         long stockBajo   = prods.stream().filter(p -> p.getStock() != null && p.getStock() < 10).count();
 
         try (PDDocument doc = new PDDocument()) {

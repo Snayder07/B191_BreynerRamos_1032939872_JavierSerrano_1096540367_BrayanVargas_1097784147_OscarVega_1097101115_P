@@ -19,6 +19,7 @@ public class PanelAdminCitas {
     public JPanel panel;
     private boolean temaOscuro = false;
     private String filtroActual = "Todas";
+    private List<Citas> cachedTodas = null;
 
     private final CitaAdminController ctrl = new CitaAdminController();
 
@@ -40,14 +41,40 @@ public class PanelAdminCitas {
 
     public PanelAdminCitas() { panel = new JPanel(new BorderLayout()); construir(); }
     public void setTema(boolean o) { if (o != temaOscuro) { temaOscuro = o; construir(); } }
-    public void recargar() { construir(); }
+    public void recargar() { cachedTodas = null; construir(); }
 
     private void construir() {
         panel.removeAll(); C = temaOscuro ? OSCURO : CLARO;
         panel.setBackground(C[0]);
         panel.add(SidebarAdmin.crear(C, temaOscuro, "adminCitas", panel), BorderLayout.WEST);
-        panel.add(crearContenido(), BorderLayout.CENTER);
+
+        if (cachedTodas != null) {
+            panel.add(crearContenido(), BorderLayout.CENTER);
+            panel.revalidate(); panel.repaint();
+            return;
+        }
+
+        JPanel cargando = new JPanel(new BorderLayout());
+        cargando.setBackground(C[0]);
+        JLabel lCargando = new JLabel("Cargando citas...", SwingConstants.CENTER);
+        lCargando.setFont(new Font("Arial", Font.PLAIN, 15));
+        lCargando.setForeground(C[7]);
+        cargando.add(lCargando, BorderLayout.CENTER);
+        panel.add(cargando, BorderLayout.CENTER);
         panel.revalidate(); panel.repaint();
+
+        new SwingWorker<List<Citas>, Void>() {
+            @Override protected List<Citas> doInBackground() {
+                return ctrl.listarTodas();
+            }
+            @Override protected void done() {
+                try { cachedTodas = get(); }
+                catch (Exception e) { cachedTodas = Collections.emptyList(); }
+                panel.remove(cargando);
+                panel.add(crearContenido(), BorderLayout.CENTER);
+                panel.revalidate(); panel.repaint();
+            }
+        }.execute();
     }
 
     private JLabel lbl(String t, int sz, int st, Color c) {
@@ -85,7 +112,7 @@ public class PanelAdminCitas {
         btnNueva.addActionListener(ev -> {
             NuevaCitaAdminDialog dlg = new NuevaCitaAdminDialog(SwingUtilities.getWindowAncestor(c));
             dlg.setVisible(true);
-            if (dlg.fueGuardado()) construir();
+            if (dlg.fueGuardado()) { cachedTodas = null; construir(); }
         });
         tr.add(btnNueva);
         tb.add(tl, BorderLayout.WEST);
@@ -164,10 +191,9 @@ public class PanelAdminCitas {
 
     // ── Contar citas por estado para el badge ─────────────────
     private int contarEstado(String estadoKey) {
-        if (estadoKey == null) return 0;
-        List<Citas> todas = ctrl.listarTodas();
+        if (estadoKey == null || cachedTodas == null) return 0;
         int count = 0;
-        for (Citas cita : todas) {
+        for (Citas cita : cachedTodas) {
             if (cita.getEstadoCita() != null && cita.getEstadoCita().name().equals(estadoKey)) count++;
         }
         return count;
@@ -175,7 +201,7 @@ public class PanelAdminCitas {
 
     // ── Tabla con filtro + acciones por fila ──────────────────
     private JPanel crearTabla(String filtro, JPanel bodyRef) {
-        List<Citas> todasCitas = ctrl.listarTodas();
+        List<Citas> todasCitas = cachedTodas != null ? new ArrayList<>(cachedTodas) : new ArrayList<>();
         Collections.reverse(todasCitas);
 
         List<Citas> citasFiltradas = new ArrayList<>();
@@ -407,7 +433,7 @@ public class PanelAdminCitas {
 
                 if (respuesta == JOptionPane.YES_OPTION) {
                     ctrl.confirmarCita(cita.getId(), panel);
-                    construir();
+                    cachedTodas = null; construir();
                 }
             });
 
@@ -425,7 +451,7 @@ public class PanelAdminCitas {
 
                 if (respuesta == JOptionPane.YES_OPTION) {
                     ctrl.cancelarCita(cita.getId(), panel);
-                    construir();
+                    cachedTodas = null; construir();
                 }
             });
         }

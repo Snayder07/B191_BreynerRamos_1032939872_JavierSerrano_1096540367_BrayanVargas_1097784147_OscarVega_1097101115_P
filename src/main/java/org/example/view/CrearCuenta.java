@@ -26,7 +26,7 @@ public class CrearCuenta {
         panel = new JPanel();
         panel.setLayout(null);
         panel.setBackground(new Color(240, 248, 244));
-        panel.setPreferredSize(new Dimension(420, 520));
+        panel.setPreferredSize(new Dimension(420, 560));
 
         // Título
         JLabel titulo = new JLabel("Crear cuenta");

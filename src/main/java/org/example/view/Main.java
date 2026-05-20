@@ -72,9 +72,13 @@ public class Main {
 
         switch (nombre) {
             case "login":
-            case "crearCuenta":
                 frame.setExtendedState(JFrame.NORMAL);
                 frame.setSize(420, 520);
+                frame.setLocationRelativeTo(null);
+                break;
+            case "crearCuenta":
+                frame.setExtendedState(JFrame.NORMAL);
+                frame.setSize(420, 580);
                 frame.setLocationRelativeTo(null);
                 break;
             case "panelCliente":   panelCliente.recargar();         expandirVentana(); break;
