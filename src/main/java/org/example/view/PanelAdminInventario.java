@@ -5,7 +5,6 @@ import org.example.model.Productos;
 
 import javax.swing.*;
 import javax.swing.border.*;
-import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
@@ -102,182 +101,69 @@ public class PanelAdminInventario {
         }
         body.add(stats,BorderLayout.NORTH);
 
-        // ── Tabla: Foto | Producto | Tipo | Marca | Precio | Stock | Estado | Editar | Eliminar
-        String[] cols = {"Foto","Producto","Tipo","Marca","Precio","Stock","Estado","Editar","Eliminar"};
-
-        Object[][] datos = new Object[lista.size()][9];
-        for (int i = 0; i < lista.size(); i++) {
-            Productos p = lista.get(i);
-            String nombre  = p.getNombre() != null ? p.getNombre() : "—";
-            String tipo    = p.getTipo()   != null ? p.getTipo()   : "—";
-            String marca   = p.getMarca()  != null ? p.getMarca()  : "—";
-            String precio  = p.getPrecio() != null ? "$" + p.getPrecio().toPlainString() : "—";
-            String stock   = p.getStock()  != null ? String.valueOf(p.getStock()) : "0";
-            String estado;
-            if      (p.getStock() == null || p.getStock() == 0) estado = "Sin stock";
-            else if (p.getStock() < 10)                         estado = "Stock bajo";
-            else                                                 estado = "OK";
-            datos[i] = new Object[]{p.getFoto(), nombre, tipo, marca, precio, stock, estado, "Editar", "Eliminar"};
+        // ── Cuadrícula de cajas (diseño) ─────────────────────
+        Color[] paleta = {
+            new Color(59, 130, 246),  // azul
+            new Color(168, 85, 247),  // violeta
+            new Color(34, 197, 94),   // verde
+            new Color(20, 184, 166),  // teal
+            new Color(251, 146, 60),  // naranja
+            new Color(239, 68, 68),   // rojo
+        };
+        int totalCards = Math.max(lista.size(), 6);
+        int gridCols = 3;
+        int gridRows = (totalCards + gridCols - 1) / gridCols;
+        JPanel grid = new JPanel(new GridLayout(gridRows, gridCols, 16, 16));
+        grid.setBackground(C[0]);
+        for (int idx = 0; idx < totalCards; idx++) {
+            Color color = paleta[idx % paleta.length];
+            JPanel card = new JPanel(new BorderLayout(0, 0));
+            card.setBackground(C[2]);
+            card.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createMatteBorder(0, 4, 0, 0, color),
+                    BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(C[9], 1),
+                            BorderFactory.createEmptyBorder(14, 14, 14, 14))));
+            if (idx < lista.size()) {
+                // botones editar/eliminar en el card real
+                Productos p = lista.get(idx);
+                JPanel footer = new JPanel(new GridLayout(1, 2, 8, 0));
+                footer.setBackground(C[2]);
+                footer.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+                JButton btnEdit = new JButton("Editar");
+                btnEdit.setFont(new Font("Arial", Font.BOLD, 11));
+                btnEdit.setBackground(new Color(37, 99, 235)); btnEdit.setForeground(Color.WHITE);
+                btnEdit.setOpaque(true); btnEdit.setBorderPainted(false);
+                btnEdit.setBorder(BorderFactory.createEmptyBorder(6, 0, 6, 0));
+                btnEdit.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
+                btnEdit.addActionListener(e -> mostrarFormEditar(p));
+                JButton btnDel = new JButton("Eliminar");
+                btnDel.setFont(new Font("Arial", Font.BOLD, 11));
+                btnDel.setBackground(new Color(220, 38, 38)); btnDel.setForeground(Color.WHITE);
+                btnDel.setOpaque(true); btnDel.setBorderPainted(false);
+                btnDel.setBorder(BorderFactory.createEmptyBorder(6, 0, 6, 0));
+                btnDel.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
+                btnDel.addActionListener(e -> {
+                    int confirm = JOptionPane.showConfirmDialog(panel,
+                            "¿Eliminar \"" + p.getNombre() + "\" del inventario?",
+                            "Confirmar eliminacion", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                    if (confirm == JOptionPane.YES_OPTION) { ctrl.eliminarProducto(p.getId(), panel); construir(); }
+                });
+                footer.add(btnEdit); footer.add(btnDel);
+                card.add(footer, BorderLayout.SOUTH);
+            }
+            JPanel placeholder = new JPanel(new BorderLayout());
+            placeholder.setBackground(C[4]);
+            placeholder.setPreferredSize(new Dimension(0, 130));
+            card.add(placeholder, BorderLayout.CENTER);
+            grid.add(card);
         }
 
-        DefaultTableModel modelo = new DefaultTableModel(datos, cols) {
-            public boolean isCellEditable(int r, int cc) { return cc == 7 || cc == 8; }
-            public Class<?> getColumnClass(int col) {
-                if (col == 0) return byte[].class;
-                return String.class;
-            }
-        };
-
-        JTable tabla = new JTable(modelo);
-        tabla.setBackground(C[2]); tabla.setForeground(C[6]);
-        tabla.setFont(new Font("Arial",Font.PLAIN,13)); tabla.setRowHeight(48);
-        tabla.setShowGrid(false); tabla.setIntercellSpacing(new Dimension(0,0));
-        tabla.setSelectionBackground(C[3]); tabla.setFillsViewportHeight(true);
-        JTableHeader th = tabla.getTableHeader();
-        th.setBackground(C[14]); th.setForeground(temaOscuro?C[7]:C[1]);
-        th.setFont(new Font("Arial",Font.BOLD,11));
-        th.setReorderingAllowed(false); th.setPreferredSize(new Dimension(0,36));
-
-        // Anchos
-        int[] anchos = {52, 170, 90, 100, 90, 60, 90, 75, 85};
-        for (int i = 0; i < anchos.length; i++)
-            tabla.getColumnModel().getColumn(i).setPreferredWidth(anchos[i]);
-
-        // ── Renderer: Foto (col 0) ────────────────────────
-        tabla.getColumnModel().getColumn(0).setCellRenderer(new DefaultTableCellRenderer() {
-            public Component getTableCellRendererComponent(JTable t, Object v, boolean s, boolean f, int r, int col) {
-                JLabel lbl = new JLabel();
-                lbl.setHorizontalAlignment(SwingConstants.CENTER);
-                lbl.setBackground(s ? C[3] : (r%2==0 ? C[2] : C[4]));
-                lbl.setOpaque(true);
-                if (v instanceof byte[] && ((byte[])v).length > 0) {
-                    try {
-                        BufferedImage img = ImageIO.read(new ByteArrayInputStream((byte[])v));
-                        if (img != null) {
-                            Image scaled = img.getScaledInstance(38, 38, Image.SCALE_SMOOTH);
-                            lbl.setIcon(new ImageIcon(scaled));
-                        }
-                    } catch (Exception ex) { lbl.setText("🖼"); }
-                } else {
-                    lbl.setText("—");
-                    lbl.setForeground(C[7]);
-                }
-                return lbl;
-            }
-        });
-
-        // ── Renderer: Estado (col 6) ──────────────────────
-        tabla.getColumnModel().getColumn(6).setCellRenderer(new DefaultTableCellRenderer() {
-            public Component getTableCellRendererComponent(JTable t, Object v, boolean s, boolean f, int r, int col) {
-                JLabel l = (JLabel) super.getTableCellRendererComponent(t,v,s,f,r,col);
-                l.setFont(new Font("Arial",Font.BOLD,12));
-                l.setHorizontalAlignment(SwingConstants.CENTER);
-                switch(v != null ? v.toString() : "") {
-                    case "Sin stock":  l.setForeground(C[12]); break;
-                    case "Stock bajo": l.setForeground(C[8]);  break;
-                    default:           l.setForeground(C[13]);
-                }
-                l.setBackground(s ? C[3] : (r%2==0 ? C[2] : C[4]));
-                l.setOpaque(true); return l;
-            }
-        });
-
-        // ── Renderer + Editor: Editar (col 7) ────────────
-        tabla.getColumnModel().getColumn(7).setCellRenderer(new TableCellRenderer() {
-            public Component getTableCellRendererComponent(JTable t, Object v, boolean s, boolean f, int r, int col) {
-                JButton btn = new JButton("Editar");
-                btn.setFont(new Font("Arial", Font.BOLD, 11));
-                btn.setBackground(new Color(37, 99, 235));
-                btn.setForeground(Color.WHITE);
-                btn.setOpaque(true); btn.setBorderPainted(false);
-                btn.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
-                return btn;
-            }
-        });
-        tabla.getColumnModel().getColumn(7).setCellEditor(new DefaultCellEditor(new JCheckBox()) {
-            private final JButton btn = new JButton("Editar");
-            {
-                btn.setFont(new Font("Arial", Font.BOLD, 11));
-                btn.setBackground(new Color(37, 99, 235));
-                btn.setForeground(Color.WHITE);
-                btn.setOpaque(true); btn.setBorderPainted(false);
-                btn.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
-                btn.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
-                btn.addActionListener(e -> {
-                    int row = tabla.getSelectedRow();
-                    if (row < 0) return;
-                    fireEditingStopped();
-                    mostrarFormEditar(lista.get(row));
-                });
-            }
-            public Component getTableCellEditorComponent(JTable t, Object v, boolean s, int r, int col) { return btn; }
-            public Object getCellEditorValue() { return "Editar"; }
-        });
-
-        // ── Renderer + Editor: Eliminar (col 8) ───────────
-        tabla.getColumnModel().getColumn(8).setCellRenderer(new TableCellRenderer() {
-            public Component getTableCellRendererComponent(JTable t, Object v, boolean s, boolean f, int r, int col) {
-                JButton btn = new JButton(" Eliminar");
-                btn.setFont(new Font("Arial", Font.BOLD, 11));
-                btn.setBackground(new Color(220, 38, 38));
-                btn.setForeground(Color.WHITE);
-                btn.setOpaque(true); btn.setBorderPainted(false);
-                btn.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
-                return btn;
-            }
-        });
-
-        tabla.getColumnModel().getColumn(8).setCellEditor(new DefaultCellEditor(new JCheckBox()) {
-            private final JButton btn = new JButton(" Eliminar");
-            {
-                btn.setFont(new Font("Arial", Font.BOLD, 11));
-                btn.setBackground(new Color(220, 38, 38));
-                btn.setForeground(Color.WHITE);
-                btn.setOpaque(true); btn.setBorderPainted(false);
-                btn.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
-                btn.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
-                btn.addActionListener(e -> {
-                    int row = tabla.getSelectedRow();
-                    if (row < 0) return;
-                    Productos prod = lista.get(row);
-                    int confirm = JOptionPane.showConfirmDialog(panel,
-                            "¿Eliminar \"" + prod.getNombre() + "\" del inventario?",
-                            "Confirmar eliminacion", JOptionPane.YES_NO_OPTION,
-                            JOptionPane.WARNING_MESSAGE);
-                    if (confirm == JOptionPane.YES_OPTION) {
-                        fireEditingStopped();
-                        ctrl.eliminarProducto(prod.getId(), panel);
-                        construir();
-                    } else {
-                        fireEditingCanceled();
-                    }
-                });
-            }
-            public Component getTableCellEditorComponent(JTable t, Object v, boolean s, int r, int col) { return btn; }
-            public Object getCellEditorValue() { return "Eliminar"; }
-        });
-
-        // ── Renderer base columnas de texto ───────────────
-        DefaultTableCellRenderer base = new DefaultTableCellRenderer() {
-            public Component getTableCellRendererComponent(JTable t, Object v, boolean s, boolean f, int r, int col) {
-                super.getTableCellRendererComponent(t,v,s,f,r,col);
-                setForeground(C[6]);
-                setBackground(r%2==0 ? C[2] : C[4]);
-                if (s) setBackground(C[3]);
-                setFont(new Font("Arial",Font.PLAIN,13));
-                setOpaque(true);
-                setBorder(BorderFactory.createEmptyBorder(0,14,0,14));
-                return this;
-            }
-        };
-        for (int i = 1; i <= 5; i++) tabla.getColumnModel().getColumn(i).setCellRenderer(base);
-
-        JScrollPane sp = new JScrollPane(tabla);
-        sp.setBorder(null); sp.getViewport().setBackground(C[2]);
-        sp.getVerticalScrollBar().setUnitIncrement(16);
-        JPanel wrapper = new JPanel(new BorderLayout());
-        wrapper.setBackground(C[2]); wrapper.add(sp, BorderLayout.CENTER);
-        body.add(wrapper, BorderLayout.CENTER);
+        JScrollPane gridScroll = new JScrollPane(grid);
+        gridScroll.setBorder(null);
+        gridScroll.getViewport().setBackground(C[0]);
+        gridScroll.getVerticalScrollBar().setUnitIncrement(16);
+        body.add(gridScroll, BorderLayout.CENTER);
 
         JScrollPane outerScroll = new JScrollPane(body);
         outerScroll.setBorder(null); outerScroll.getViewport().setBackground(C[0]);

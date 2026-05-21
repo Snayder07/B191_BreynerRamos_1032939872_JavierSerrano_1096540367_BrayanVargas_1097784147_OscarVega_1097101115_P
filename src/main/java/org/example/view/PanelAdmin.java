@@ -159,55 +159,74 @@ public class PanelAdmin {
 
     private void mostrarFormularioNuevoAdmin() {
         JDialog dlg = new JDialog(Main.frame, "Registrar nuevo administrador", true);
-        dlg.setSize(440, 480);
+        dlg.setSize(460, 530);
         dlg.setLocationRelativeTo(Main.frame);
         dlg.setResizable(false);
 
+        JPanel root = new JPanel(new BorderLayout(0, 0));
+        root.setBackground(C[2]);
+
+        // ── HEADER ────────────────────────────────────────────
+        JPanel header = new JPanel(new BorderLayout());
+        header.setBackground(C[1]);
+        header.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
+        JPanel hText = new JPanel();
+        hText.setLayout(new BoxLayout(hText, BoxLayout.Y_AXIS));
+        hText.setBackground(C[1]);
+        JLabel hTitle = new JLabel("Nuevo administrador");
+        hTitle.setFont(new Font("Arial", Font.BOLD, 16));
+        hTitle.setForeground(Color.WHITE);
+        hTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel hSub = new JLabel("Solo los admins pueden crear cuentas de administrador");
+        hSub.setFont(new Font("Arial", Font.PLAIN, 11));
+        hSub.setForeground(new Color(180, 220, 195));
+        hSub.setAlignmentX(Component.LEFT_ALIGNMENT);
+        hText.add(hTitle); hText.add(Box.createVerticalStrut(4)); hText.add(hSub);
+        header.add(hText, BorderLayout.CENTER);
+        root.add(header, BorderLayout.NORTH);
+
+        // ── FORM BODY ─────────────────────────────────────────
         JPanel form = new JPanel();
         form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
         form.setBackground(C[2]);
-        form.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
-
-        JLabel titulo = lbl("Nuevo administrador", 16, Font.BOLD, C[6]);
-        titulo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JLabel sub = lbl("Solo los admins pueden crear cuentas de administrador", 11, Font.PLAIN, C[7]);
-        sub.setAlignmentX(Component.LEFT_ALIGNMENT);
-        form.add(titulo); form.add(Box.createVerticalStrut(4)); form.add(sub);
-        form.add(Box.createVerticalStrut(20));
+        form.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
 
         JLabel lNombre = lbl("Nombre", 12, Font.BOLD, C[6]);
         lNombre.setAlignmentX(Component.LEFT_ALIGNMENT);
-        form.add(lNombre); form.add(Box.createVerticalStrut(6));
+        form.add(lNombre); form.add(Box.createVerticalStrut(5));
         JTextField tfNombre = new JTextField();
         tfNombre.setFont(new Font("Arial", Font.PLAIN, 13));
         tfNombre.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        tfNombre.setAlignmentX(Component.LEFT_ALIGNMENT);
         tfNombre.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(C[9], 1), BorderFactory.createEmptyBorder(6,10,6,10)));
         form.add(tfNombre); form.add(Box.createVerticalStrut(12));
 
         JLabel lApellido = lbl("Apellido", 12, Font.BOLD, C[6]);
         lApellido.setAlignmentX(Component.LEFT_ALIGNMENT);
-        form.add(lApellido); form.add(Box.createVerticalStrut(6));
+        form.add(lApellido); form.add(Box.createVerticalStrut(5));
         JTextField tfApellido = new JTextField();
         tfApellido.setFont(new Font("Arial", Font.PLAIN, 13));
         tfApellido.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        tfApellido.setAlignmentX(Component.LEFT_ALIGNMENT);
         tfApellido.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(C[9], 1), BorderFactory.createEmptyBorder(6,10,6,10)));
         form.add(tfApellido); form.add(Box.createVerticalStrut(12));
 
         JLabel lCorreo = lbl("Correo electrónico", 12, Font.BOLD, C[6]);
         lCorreo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        form.add(lCorreo); form.add(Box.createVerticalStrut(6));
+        form.add(lCorreo); form.add(Box.createVerticalStrut(5));
         JTextField tfCorreo = new JTextField();
         tfCorreo.setFont(new Font("Arial", Font.PLAIN, 13));
         tfCorreo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        tfCorreo.setAlignmentX(Component.LEFT_ALIGNMENT);
         tfCorreo.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(C[9], 1), BorderFactory.createEmptyBorder(6,10,6,10)));
         form.add(tfCorreo); form.add(Box.createVerticalStrut(12));
 
         JLabel lPass = lbl("Contraseña", 12, Font.BOLD, C[6]);
         lPass.setAlignmentX(Component.LEFT_ALIGNMENT);
-        form.add(lPass); form.add(Box.createVerticalStrut(6));
+        form.add(lPass); form.add(Box.createVerticalStrut(5));
         JPasswordField tfPass = new JPasswordField();
         tfPass.setFont(new Font("Arial", Font.PLAIN, 13));
         tfPass.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
@@ -218,17 +237,27 @@ public class PanelAdmin {
 
         JLabel lCargo = lbl("Cargo", 12, Font.BOLD, C[6]);
         lCargo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        form.add(lCargo); form.add(Box.createVerticalStrut(6));
+        form.add(lCargo); form.add(Box.createVerticalStrut(5));
         JComboBox<String> cbCargo = new JComboBox<>(new String[]{
                 "Administrador", "Veterinario", "Recepcionista"
         });
         cbCargo.setFont(new Font("Arial", Font.PLAIN, 13));
         cbCargo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
-        form.add(cbCargo); form.add(Box.createVerticalStrut(24));
+        cbCargo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        cbCargo.setBackground(C[2]);
+        form.add(cbCargo); form.add(Box.createVerticalStrut(20));
 
-        JPanel bots = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        bots.setBackground(C[2]); bots.setAlignmentX(Component.LEFT_ALIGNMENT);
-        bots.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+        JSeparator sepLine = new JSeparator();
+        sepLine.setForeground(C[9]);
+        sepLine.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+        sepLine.setAlignmentX(Component.LEFT_ALIGNMENT);
+        form.add(sepLine); form.add(Box.createVerticalStrut(14));
+
+        // Botones: ancho completo lado a lado
+        JPanel bots = new JPanel(new GridLayout(1, 2, 10, 0));
+        bots.setBackground(C[2]);
+        bots.setAlignmentX(Component.LEFT_ALIGNMENT);
+        bots.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
 
         JButton btnCancelar = new JButton("Cancelar");
         btnCancelar.setFont(new Font("Arial", Font.PLAIN, 13));
@@ -245,11 +274,11 @@ public class PanelAdmin {
         btnGuardar.setBorder(BorderFactory.createEmptyBorder(9,18,9,18));
         btnGuardar.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                String nombre    = tfNombre.getText().trim();
-                String apellido  = tfApellido.getText().trim();
-                String correo = tfCorreo.getText().trim();
-                String pass   = new String(tfPass.getPassword()).trim();
-                String cargo  = (String) cbCargo.getSelectedItem();
+                String nombre   = tfNombre.getText().trim();
+                String apellido = tfApellido.getText().trim();
+                String correo   = tfCorreo.getText().trim();
+                String pass     = new String(tfPass.getPassword()).trim();
+                String cargo    = (String) cbCargo.getSelectedItem();
 
                 if (nombre.isEmpty() || correo.isEmpty() || pass.isEmpty()) {
                     JOptionPane.showMessageDialog(dlg,
@@ -273,7 +302,8 @@ public class PanelAdmin {
         bots.add(btnCancelar); bots.add(btnGuardar);
         form.add(bots);
 
-        dlg.setContentPane(form);
+        root.add(form, BorderLayout.CENTER);
+        dlg.setContentPane(root);
         dlg.setVisible(true);
     }
 
