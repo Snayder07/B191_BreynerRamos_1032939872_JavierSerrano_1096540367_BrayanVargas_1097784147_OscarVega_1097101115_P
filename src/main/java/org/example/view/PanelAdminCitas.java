@@ -1,9 +1,12 @@
 package org.example.view;
 
 import org.example.controller.CitaAdminController;
+import org.example.controller.VacunaAdminController;
 import org.example.model.Cita_servicio;
 import org.example.model.Citas;
+import org.example.model.Control_vacunas;
 import org.example.model.EstadoCita;
+import org.example.model.Vacunas;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -21,7 +24,8 @@ public class PanelAdminCitas {
     private String filtroActual = "Todas";
     private List<Citas> cachedTodas = null;
 
-    private final CitaAdminController ctrl = new CitaAdminController();
+    private final CitaAdminController    ctrl        = new CitaAdminController();
+    private final VacunaAdminController  vacunaCtrl  = new VacunaAdminController();
 
     private final Color[] CLARO = {
             new Color(240,253,244), new Color(22,101,52),   Color.WHITE,
@@ -339,6 +343,102 @@ public class PanelAdminCitas {
     }
 
     // ════════════════════════════════════════════════════════
+    //  DIALOGO REGISTRO DE VACUNA desde confirmación de cita
+    // ════════════════════════════════════════════════════════
+    private void abrirDialogoRegistrarVacuna(Citas cita) {
+        java.util.List<Vacunas> vacunas = vacunaCtrl.listarVacunas();
+        if (vacunas.isEmpty()) return;
+
+        Window owner = SwingUtilities.getWindowAncestor(panel);
+        JDialog dialog = new JDialog(owner,
+                "Registrar vacuna para " + cita.getMascota().getNombre(),
+                Dialog.ModalityType.APPLICATION_MODAL);
+        dialog.setSize(480, 310);
+        dialog.setLocationRelativeTo(panel);
+        dialog.setResizable(false);
+
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setBackground(C[2]);
+        form.setBorder(BorderFactory.createEmptyBorder(24, 28, 20, 28));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(8, 6, 8, 6);
+
+        String nombreMascota = cita.getMascota().getNombre()
+                + (cita.getMascota().getCliente() != null
+                   ? " (" + cita.getMascota().getCliente().getNombre() + ")" : "");
+
+        JComboBox<Vacunas> cmbVacuna = new JComboBox<>(vacunas.toArray(new Vacunas[0]));
+        cmbVacuna.setRenderer(new DefaultListCellRenderer() {
+            public Component getListCellRendererComponent(JList<?> list, Object v, int idx, boolean sel, boolean focus) {
+                super.getListCellRendererComponent(list, v, idx, sel, focus);
+                if (v instanceof Vacunas) setText(((Vacunas) v).getNombre());
+                return this;
+            }
+        });
+
+        Object[][] filas = {
+            {"Mascota:",    new JLabel(nombreMascota)},
+            {"Tipo de vacuna:", cmbVacuna},
+        };
+        for (int i = 0; i < filas.length; i++) {
+            gbc.gridx = 0; gbc.gridy = i; gbc.weightx = 0.3;
+            JLabel lbl = new JLabel((String) filas[i][0]);
+            lbl.setFont(new Font("Arial", Font.BOLD, 12)); lbl.setForeground(C[6]);
+            form.add(lbl, gbc);
+            gbc.gridx = 1; gbc.weightx = 0.7;
+            Component comp = (Component) filas[i][1];
+            comp.setFont(new Font("Arial", Font.PLAIN, 13));
+            form.add(comp, gbc);
+        }
+
+        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2; gbc.weightx = 1.0;
+        JLabel info = new JLabel("<html><i>La vacuna quedará pendiente hasta que el cliente la reciba.</i></html>");
+        info.setFont(new Font("Arial", Font.PLAIN, 11)); info.setForeground(C[7]);
+        form.add(info, gbc);
+
+        JPanel btns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 4));
+        btns.setBackground(C[2]);
+        JButton btnOmitir = new JButton("Omitir");
+        btnOmitir.setFont(new Font("Arial", Font.PLAIN, 13)); btnOmitir.setBackground(C[2]);
+        btnOmitir.setForeground(C[6]); btnOmitir.setOpaque(true);
+        btnOmitir.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(C[9], 1), BorderFactory.createEmptyBorder(7, 14, 7, 14)));
+        btnOmitir.addActionListener(ev -> dialog.dispose());
+
+        JButton btnGuardar = new JButton("Registrar vacuna");
+        btnGuardar.setFont(new Font("Arial", Font.BOLD, 13));
+        btnGuardar.setBackground(new Color(22, 163, 74)); btnGuardar.setForeground(Color.WHITE);
+        btnGuardar.setOpaque(true); btnGuardar.setBorderPainted(false);
+        btnGuardar.setBorder(BorderFactory.createEmptyBorder(9, 18, 9, 18));
+        btnGuardar.addActionListener(ev -> {
+            Vacunas vacSel = (Vacunas) cmbVacuna.getSelectedItem();
+            if (vacSel == null) { JOptionPane.showMessageDialog(dialog, "Selecciona una vacuna."); return; }
+            Control_vacunas cv = new Control_vacunas();
+            cv.setMascota(cita.getMascota());
+            cv.setVacuna(vacSel);
+            // Fecha de aplicacion = fecha de la cita (queda pendiente si es futura)
+            cv.setFechaAplicacion(cita.getFechaCita());
+            cv.setProximaDosis(null);
+            try {
+                vacunaCtrl.guardar(cv);
+                JOptionPane.showMessageDialog(dialog,
+                        "Vacuna registrada. Aparecerá como Pendiente hasta que el cliente sea atendido.",
+                        "Vacuna registrada", JOptionPane.INFORMATION_MESSAGE);
+                dialog.dispose();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dialog, "Error al registrar: " + ex.getMessage());
+            }
+        });
+        btns.add(btnOmitir); btns.add(btnGuardar);
+
+        gbc.gridy = 3;
+        form.add(btns, gbc);
+        dialog.add(form);
+        dialog.setVisible(true);
+    }
+
+    // ════════════════════════════════════════════════════════
     //  RENDERER columna Accion — muestra boton visual
     // ════════════════════════════════════════════════════════
     private class AccionRenderer extends JPanel implements TableCellRenderer {
@@ -434,6 +534,20 @@ public class PanelAdminCitas {
                 if (respuesta == JOptionPane.YES_OPTION) {
                     ctrl.confirmarCita(cita.getId(), panel);
                     cachedTodas = null; construir();
+                    // Si es cita de vacunación, ofrecer registro de vacuna
+                    boolean esVacunacion = (cita.getMotivo() != null &&
+                            cita.getMotivo().toLowerCase().contains("vacun"));
+                    if (!esVacunacion && cita.getServicios() != null) {
+                        for (Cita_servicio cs : cita.getServicios()) {
+                            if (cs.getServicio() != null &&
+                                    cs.getServicio().getNombre().toLowerCase().contains("vacun")) {
+                                esVacunacion = true; break;
+                            }
+                        }
+                    }
+                    if (esVacunacion && cita.getMascota() != null) {
+                        abrirDialogoRegistrarVacuna(cita);
+                    }
                 }
             });
 

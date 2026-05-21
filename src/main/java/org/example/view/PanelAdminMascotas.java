@@ -233,7 +233,16 @@ public class PanelAdminMascotas {
                         tfCar.requestFocusInWindow();
                         form.revalidate();
                     });
-            if (ok) { dlg.dispose(); recargar(); }
+            if (ok) {
+                dlg.dispose();
+                recargar();
+                int resp = JOptionPane.showConfirmDialog(panel,
+                    "Mascota registrada.\n¿Deseas ir a registrar las vacunas de " + tfNombre.getText().trim() + " ahora?",
+                    "Registrar vacunas", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+                if (resp == JOptionPane.YES_OPTION) {
+                    Main.cambiarPantalla("adminVacunas");
+                }
+            }
         });
         btnRow.add(btnCancel); btnRow.add(btnGuardar);
         form.add(btnRow);

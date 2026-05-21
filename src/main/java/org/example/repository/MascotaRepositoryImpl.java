@@ -32,6 +32,17 @@ public class MascotaRepositoryImpl implements MascotaRepository {
         return mascotas;
     }
 
+    public List<Mascotas> buscarPorCliente(Integer clienteId) {
+        EntityManager em = JPAUtil.getEntityManager();
+        List<Mascotas> mascotas = em.createQuery(
+            "SELECT m FROM Mascotas m JOIN FETCH m.especie WHERE m.cliente.id = :clienteId ORDER BY m.nombre",
+            Mascotas.class)
+            .setParameter("clienteId", clienteId)
+            .getResultList();
+        em.close();
+        return mascotas;
+    }
+
     public void actualizar(Mascotas mascota) {
         EntityManager em = JPAUtil.getEntityManager();
         em.getTransaction().begin();

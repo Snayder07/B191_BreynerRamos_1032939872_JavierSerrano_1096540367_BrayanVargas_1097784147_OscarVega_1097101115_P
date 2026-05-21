@@ -37,6 +37,10 @@ public class MascotaService {
         return repositorio.buscarTodos();
     }
 
+    public List<Mascotas> listarPorCliente(Integer clienteId) {
+        return repositorio.buscarPorCliente(clienteId);
+    }
+
     // ─────────────────────────────────────────────────────────
     // BUSCAR POR ID
     // ─────────────────────────────────────────────────────────

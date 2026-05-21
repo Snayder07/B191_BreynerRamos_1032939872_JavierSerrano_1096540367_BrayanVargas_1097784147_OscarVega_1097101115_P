@@ -440,9 +440,13 @@ public class PanelAgendarCita {
         botones.add(btnCancelar); botones.add(btnConfirmar);
         form.add(botones);
 
-        form.setPreferredSize(new Dimension(560, form.getPreferredSize().height));
-        form.setMaximumSize(new Dimension(560, Integer.MAX_VALUE));
-        outer.add(form);
+        form.setPreferredSize(new Dimension(600, form.getPreferredSize().height));
+        form.setMaximumSize(new Dimension(700, Integer.MAX_VALUE));
+        GridBagConstraints gbcOuter = new GridBagConstraints();
+        gbcOuter.fill = GridBagConstraints.BOTH;
+        gbcOuter.weightx = 1; gbcOuter.weighty = 1;
+        gbcOuter.insets = new Insets(24, 40, 24, 40);
+        outer.add(form, gbcOuter);
 
         JScrollPane scrollOuter = new JScrollPane(outer);
         scrollOuter.setBorder(null); scrollOuter.getViewport().setBackground(C[0]);

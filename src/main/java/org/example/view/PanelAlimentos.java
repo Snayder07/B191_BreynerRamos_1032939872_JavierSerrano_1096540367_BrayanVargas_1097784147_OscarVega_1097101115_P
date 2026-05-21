@@ -184,36 +184,33 @@ public class PanelAlimentos {
             new Color(239, 68, 68),    // rojo
         };
 
-        final int TOTAL_SLOTS = 6;
+        int totalProductos = lista.size();
+        if (totalProductos == 0) {
+            JLabel sinProd = new JLabel("No hay productos disponibles.", SwingConstants.CENTER);
+            sinProd.setFont(new Font("Arial", Font.PLAIN, 14));
+            sinProd.setForeground(C[7]);
+            cuerpo.add(sinProd, BorderLayout.CENTER);
+            contenido.add(cuerpo, BorderLayout.CENTER);
+            return contenido;
+        }
         int cols = 3;
-        int rows = TOTAL_SLOTS / cols;   // siempre 2 filas
+        int rows = (totalProductos + cols - 1) / cols;
 
         JPanel grid = new JPanel(new GridLayout(rows, cols, 16, 16));
         grid.setBackground(C[0]);
 
-        for (int idx = 0; idx < TOTAL_SLOTS; idx++) {
-            boolean tieneProducto = idx < lista.size();
-            Productos p  = tieneProducto ? lista.get(idx) : null;
+        for (int idx = 0; idx < totalProductos; idx++) {
+            Productos p  = lista.get(idx);
             Color    color = paleta[idx % paleta.length];
 
-            // ── TARJETA (con o sin producto) ─────────────────
+            // ── TARJETA ───────────────────────────────────────
             JPanel card = new JPanel(new BorderLayout(0, 10));
             card.setBackground(C[2]);
             card.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(0, 4, 0, 0, tieneProducto ? color : C[8]),
+                    BorderFactory.createMatteBorder(0, 4, 0, 0, color),
                     BorderFactory.createCompoundBorder(
                             BorderFactory.createLineBorder(C[9], 1),
                             BorderFactory.createEmptyBorder(16, 16, 16, 16))));
-
-            if (!tieneProducto) {
-                // Slot vacío
-                JLabel ph = new JLabel("Sin producto", SwingConstants.CENTER);
-                ph.setFont(new Font("Arial", Font.PLAIN, 12));
-                ph.setForeground(C[7]);
-                card.add(ph, BorderLayout.CENTER);
-                grid.add(card);
-                continue;
-            }
 
             // ── Datos ────────────────────────────────────────
             String cat      = p.getTipo() != null && !p.getTipo().isEmpty() ? p.getTipo().toUpperCase() : "PRODUCTO";

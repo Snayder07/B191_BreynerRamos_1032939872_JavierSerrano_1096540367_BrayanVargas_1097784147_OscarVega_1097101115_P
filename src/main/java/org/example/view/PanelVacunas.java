@@ -3,6 +3,7 @@ package org.example.view;
 import org.example.model.Control_vacunas;
 import org.example.model.Mascotas;
 import org.example.service.ControlVacunaService;
+import org.example.service.MascotaService;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -18,7 +19,9 @@ public class PanelVacunas {
     private boolean temaOscuro = false;
     private Mascotas mascotaSeleccionada = null;
     private List<Control_vacunas> cachedVacunas = null;
+    private List<Mascotas> cachedMascotas = null;
     private final ControlVacunaService vacunaService = new ControlVacunaService();
+    private final MascotaService mascotaService = new MascotaService();
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
@@ -44,17 +47,17 @@ public class PanelVacunas {
     public PanelVacunas() { panel = new JPanel(new BorderLayout()); construir(); }
 
     public void setTema(boolean oscuro) {
-        if (oscuro != temaOscuro) { temaOscuro = oscuro; cachedVacunas = null; construir(); }
+        if (oscuro != temaOscuro) { temaOscuro = oscuro; cachedVacunas = null; cachedMascotas = null; construir(); }
     }
-    public void recargar() { cachedVacunas = null; mascotaSeleccionada = null; construir(); }
+    public void recargar() { cachedVacunas = null; cachedMascotas = null; mascotaSeleccionada = null; construir(); }
 
     private void construir() {
         panel.removeAll(); C = temaOscuro ? OSCURO : CLARO;
         panel.setBackground(C[0]);
         panel.add(crearSidebar(), BorderLayout.WEST);
 
-        if (cachedVacunas != null) {
-            panel.add(crearContenido(cachedVacunas), BorderLayout.CENTER);
+        if (cachedVacunas != null && cachedMascotas != null) {
+            panel.add(crearContenido(cachedVacunas, cachedMascotas), BorderLayout.CENTER);
             panel.revalidate(); panel.repaint();
             return;
         }
@@ -63,22 +66,34 @@ public class PanelVacunas {
         panel.add(cargando, BorderLayout.CENTER);
         panel.revalidate(); panel.repaint();
 
-        new SwingWorker<List<Control_vacunas>, Void>() {
+        new SwingWorker<Object[], Void>() {
             @Override
-            protected List<Control_vacunas> doInBackground() {
-                if (Main.clienteActual == null) return Collections.emptyList();
-                try { return vacunaService.listarPorCliente(Main.clienteActual.getId()); }
-                catch (Exception e) { return Collections.emptyList(); }
+            protected Object[] doInBackground() {
+                if (Main.clienteActual == null) return new Object[]{Collections.emptyList(), Collections.emptyList()};
+                try {
+                    List<Control_vacunas> vacunas = vacunaService.listarPorCliente(Main.clienteActual.getId());
+                    List<Mascotas> mascotas = mascotaService.listarPorCliente(Main.clienteActual.getId());
+                    return new Object[]{vacunas, mascotas};
+                } catch (Exception e) {
+                    return new Object[]{Collections.emptyList(), Collections.emptyList()};
+                }
             }
             @Override
+            @SuppressWarnings("unchecked")
             protected void done() {
-                try   { cachedVacunas = get(); }
-                catch (InterruptedException | ExecutionException e) { cachedVacunas = Collections.emptyList(); }
-                if (mascotaSeleccionada == null && !cachedVacunas.isEmpty()) {
-                    mascotaSeleccionada = cachedVacunas.get(0).getMascota();
+                try {
+                    Object[] result = get();
+                    cachedVacunas  = (List<Control_vacunas>) result[0];
+                    cachedMascotas = (List<Mascotas>) result[1];
+                } catch (InterruptedException | ExecutionException e) {
+                    cachedVacunas  = Collections.emptyList();
+                    cachedMascotas = Collections.emptyList();
+                }
+                if (mascotaSeleccionada == null && !cachedMascotas.isEmpty()) {
+                    mascotaSeleccionada = cachedMascotas.get(0);
                 }
                 panel.remove(cargando);
-                panel.add(crearContenido(cachedVacunas), BorderLayout.CENTER);
+                panel.add(crearContenido(cachedVacunas, cachedMascotas), BorderLayout.CENTER);
                 panel.revalidate(); panel.repaint();
             }
         }.execute();
@@ -194,7 +209,7 @@ public class PanelVacunas {
         return sb;
     }
 
-    private JPanel crearContenido(List<Control_vacunas> todos) {
+    private JPanel crearContenido(List<Control_vacunas> todos, List<Mascotas> todasMascotas) {
         JPanel contenido = new JPanel(new BorderLayout());
         contenido.setBackground(C[0]);
 
@@ -215,16 +230,8 @@ public class PanelVacunas {
         cuerpo.setBackground(C[0]);
         cuerpo.setBorder(BorderFactory.createEmptyBorder(24, 28, 28, 28));
 
-        // Mascotas únicas
-        List<Mascotas> mascotasUnicas = new ArrayList<>();
-        for (Control_vacunas cv : todos) {
-            Mascotas m = cv.getMascota();
-            boolean yaEsta = false;
-            for (Mascotas mu : mascotasUnicas) {
-                if (mu.getId().equals(m.getId())) { yaEsta = true; break; }
-            }
-            if (!yaEsta) mascotasUnicas.add(m);
-        }
+        // Usar las mascotas cargadas directamente (todas las del cliente)
+        List<Mascotas> mascotasUnicas = todasMascotas != null ? new ArrayList<>(todasMascotas) : new ArrayList<>();
 
         if (mascotaSeleccionada == null && !mascotasUnicas.isEmpty())
             mascotaSeleccionada = mascotasUnicas.get(0);
@@ -294,7 +301,7 @@ public class PanelVacunas {
             List<Control_vacunas> necesitanAtencion = new ArrayList<>();
             for (Control_vacunas cv : vacunasMascota) {
                 String est = cv.getEstado();
-                if ("Vencida".equals(est) || "Próxima".equals(est)) necesitanAtencion.add(cv);
+                if ("Vencida".equals(est) || "Próxima".equals(est) || "Pendiente".equals(est)) necesitanAtencion.add(cv);
             }
             if (!necesitanAtencion.isEmpty()) {
                 lista.add(crearBannerVacunas(necesitanAtencion));
@@ -309,9 +316,10 @@ public class PanelVacunas {
 
                 Color estadoColor;
                 switch (estado) {
-                    case "Vencida": estadoColor = new Color(220, 38, 38);  break;
-                    case "Próxima": estadoColor = new Color(234, 88, 12);  break;
-                    default:        estadoColor = new Color(22, 163, 74);  break;
+                    case "Vencida":   estadoColor = new Color(220, 38, 38);  break;
+                    case "Próxima":   estadoColor = new Color(234, 88, 12);  break;
+                    case "Pendiente": estadoColor = new Color(161, 98, 7);   break;
+                    default:          estadoColor = new Color(22, 163, 74);  break;
                 }
 
                 JPanel card = new JPanel(new BorderLayout(12, 0));
@@ -375,7 +383,9 @@ public class PanelVacunas {
             String estado = cv.getEstado();
             String prox   = cv.getProximaDosis() != null
                     ? "  —  Próxima dosis: " + cv.getProximaDosis().format(FMT) : "";
-            Color c = "Vencida".equals(estado) ? new Color(220, 38, 38) : new Color(234, 88, 12);
+            Color c = "Vencida".equals(estado) ? new Color(220, 38, 38)
+                    : "Pendiente".equals(estado) ? new Color(161, 98, 7)
+                    : new Color(234, 88, 12);
             JLabel l = new JLabel("• " + nombre + "  [" + estado + "]" + prox);
             l.setFont(new Font("Arial", Font.PLAIN, 12));
             l.setForeground(c);

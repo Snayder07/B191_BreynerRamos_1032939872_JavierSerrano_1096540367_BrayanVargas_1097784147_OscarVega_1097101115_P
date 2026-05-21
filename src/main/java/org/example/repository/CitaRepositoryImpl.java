@@ -36,7 +36,7 @@ public class CitaRepositoryImpl implements CitaRepository {
     public List<Citas> buscarPorCliente(Integer clienteId) {
         EntityManager em = JPAUtil.getEntityManager();
         List<Citas> citas = em.createQuery(
-                        "SELECT c FROM Citas c WHERE c.mascota.cliente.id = :clienteId", Citas.class)
+                        "SELECT c FROM Citas c WHERE c.mascota.cliente.id = :clienteId ORDER BY c.fechaCita DESC, c.horaCita DESC", Citas.class)
                 .setParameter("clienteId", clienteId)
                 .getResultList();
         em.close();

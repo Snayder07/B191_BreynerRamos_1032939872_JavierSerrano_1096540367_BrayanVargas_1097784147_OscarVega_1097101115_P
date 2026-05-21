@@ -19,7 +19,7 @@ public class EmpleadoService {
         Empleados empleado = repositorio.buscarPorCorreo(correo.trim());
         if (empleado == null)
             throw new Exception("No existe un administrador con ese correo.");
-        if (!empleado.getContrasena().equals(contrasena))
+        if (!empleado.getContrasena().trim().equals(contrasena.trim()))
             throw new Exception("Contraseña incorrecta.");
 
         return true;
@@ -48,7 +48,7 @@ public class EmpleadoService {
         nuevo.setNombre(nombre.trim());
         nuevo.setApellido(apellido != null ? apellido.trim() : "");
         nuevo.setCorreo(correo.trim().toLowerCase());
-        nuevo.setContrasena(contrasena);
+        nuevo.setContrasena(contrasena.trim());
         nuevo.setCargo(cargo != null && !cargo.trim().isEmpty() ? cargo.trim() : "Administrador");
         repositorio.guardar(nuevo);
     }

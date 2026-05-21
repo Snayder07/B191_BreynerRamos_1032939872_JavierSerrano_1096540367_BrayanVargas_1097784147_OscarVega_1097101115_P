@@ -210,49 +210,11 @@ public class PanelAdmin {
         form.add(lPass); form.add(Box.createVerticalStrut(6));
         JPasswordField tfPass = new JPasswordField();
         tfPass.setFont(new Font("Arial", Font.PLAIN, 13));
+        tfPass.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        tfPass.setAlignmentX(Component.LEFT_ALIGNMENT);
         tfPass.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(C[9], 1), BorderFactory.createEmptyBorder(6,10,6,36)));
-        JPanel wrapPass = new JPanel(null);
-        wrapPass.setOpaque(false);
-        wrapPass.setAlignmentX(Component.LEFT_ALIGNMENT);
-        wrapPass.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
-        wrapPass.setPreferredSize(new Dimension(300, 36));
-        tfPass.setBounds(0, 0, 2000, 36);
-        wrapPass.add(tfPass);
-        JButton btnOjoAdmin = new JButton() {
-            @Override protected void paintComponent(java.awt.Graphics g) {
-                java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
-                g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(getModel().isPressed() ? new java.awt.Color(29,158,117) : new java.awt.Color(150,150,150));
-                int cx=getWidth()/2, cy=getHeight()/2;
-                g2.setStroke(new java.awt.BasicStroke(1.6f, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
-                g2.drawOval(cx-6, cy-4, 12, 8);
-                g2.fillOval(cx-2, cy-2, 5, 5);
-                if ((Boolean)getClientProperty("oculto") == Boolean.FALSE) {
-                    g2.setStroke(new java.awt.BasicStroke(2f, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
-                    g2.drawLine(cx-8, cy+5, cx+8, cy-5);
-                }
-                g2.dispose();
-            }
-        };
-        btnOjoAdmin.putClientProperty("oculto", Boolean.TRUE);
-        btnOjoAdmin.setOpaque(false); btnOjoAdmin.setContentAreaFilled(false); btnOjoAdmin.setBorderPainted(false);
-        btnOjoAdmin.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-        btnOjoAdmin.addActionListener(ev -> {
-            boolean oculto = (Boolean) btnOjoAdmin.getClientProperty("oculto");
-            if (oculto) { tfPass.setEchoChar((char)0); btnOjoAdmin.putClientProperty("oculto", Boolean.FALSE); }
-            else { tfPass.setEchoChar('•'); btnOjoAdmin.putClientProperty("oculto", Boolean.TRUE); }
-            btnOjoAdmin.repaint();
-        });
-        wrapPass.addComponentListener(new java.awt.event.ComponentAdapter() {
-            @Override public void componentResized(java.awt.event.ComponentEvent e) {
-                int w = wrapPass.getWidth(), h = wrapPass.getHeight();
-                tfPass.setBounds(0, 0, w, h);
-                btnOjoAdmin.setBounds(w-30, (h-24)/2, 26, 24);
-            }
-        });
-        wrapPass.add(btnOjoAdmin);
-        form.add(wrapPass); form.add(Box.createVerticalStrut(12));
+                BorderFactory.createLineBorder(C[9], 1), BorderFactory.createEmptyBorder(6,10,6,10)));
+        form.add(tfPass); form.add(Box.createVerticalStrut(12));
 
         JLabel lCargo = lbl("Cargo", 12, Font.BOLD, C[6]);
         lCargo.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -286,7 +248,7 @@ public class PanelAdmin {
                 String nombre    = tfNombre.getText().trim();
                 String apellido  = tfApellido.getText().trim();
                 String correo = tfCorreo.getText().trim();
-                String pass   = new String(tfPass.getPassword());
+                String pass   = new String(tfPass.getPassword()).trim();
                 String cargo  = (String) cbCargo.getSelectedItem();
 
                 if (nombre.isEmpty() || correo.isEmpty() || pass.isEmpty()) {

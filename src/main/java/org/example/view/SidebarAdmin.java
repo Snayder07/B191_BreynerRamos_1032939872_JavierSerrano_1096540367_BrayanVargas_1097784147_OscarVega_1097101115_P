@@ -112,19 +112,6 @@ public class SidebarAdmin {
         sb.add(btnReportes); sb.add(Box.createVerticalStrut(4));
 
         agregarSep(sb, C);
-
-        // ── CONFIGURACIÓN ─────────────────────────────────
-        agregarSeccion(sb, "CONFIGURACION", C);
-
-        JButton btnCorreo = crearItem("⚙", "Configurar correo", false, C);
-        btnCorreo.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                new ConfigurarCorreoDialog(SwingUtilities.getWindowAncestor(panelRef)).setVisible(true);
-            }
-        });
-        sb.add(btnCorreo); sb.add(Box.createVerticalStrut(4));
-
-        agregarSep(sb, C);
         sb.add(Box.createVerticalGlue());
 
         // ── Cerrar sesión ─────────────────────────────────

@@ -46,5 +46,10 @@ public class Control_vacunas {
     public LocalDate getProximaDosis() { return proximaDosis; }
     public void setProximaDosis(LocalDate proximaDosis) { this.proximaDosis = proximaDosis; }
 
-    public String getEstado() { return estado != null ? estado : "Al día"; }
+    public String getEstado() {
+        if (fechaAplicacion != null && fechaAplicacion.isAfter(java.time.LocalDate.now())) {
+            return "Pendiente";
+        }
+        return estado != null ? estado : "Al día";
+    }
 }
