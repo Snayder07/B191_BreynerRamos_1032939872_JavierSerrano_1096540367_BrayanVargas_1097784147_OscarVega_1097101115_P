@@ -10,6 +10,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     <dependencies>
+
+
         <!--   Hibernate JPA   -->
         <dependency>
             <groupId>org.hibernate.orm</groupId>
@@ -35,6 +37,7 @@
             <artifactId>pdfbox</artifactId>
             <version>2.0.30</version>
         </dependency>
+
         <!--  JavaMail — envío de correos para recuperación de contraseña  -->
         <dependency>
             <groupId>com.sun.mail</groupId>

@@ -324,6 +324,7 @@ public class PanelVacunas {
 
                 JPanel card = new JPanel(new BorderLayout(12, 0));
                 card.setBackground(C[2]);
+                card.setAlignmentX(Component.LEFT_ALIGNMENT);
                 card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 72));
                 card.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createMatteBorder(0, 4, 0, 0, estadoColor),
@@ -346,9 +347,15 @@ public class PanelVacunas {
             }
         }
 
-        JScrollPane scroll = new JScrollPane(lista);
+        // Envolver lista en un panel que ocupa todo el ancho
+        JPanel listaWrap = new JPanel(new BorderLayout());
+        listaWrap.setBackground(C[0]);
+        listaWrap.add(lista, BorderLayout.NORTH);
+
+        JScrollPane scroll = new JScrollPane(listaWrap);
         scroll.setBorder(null); scroll.getViewport().setBackground(C[0]);
         scroll.getVerticalScrollBar().setUnitIncrement(12);
+        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         vacunasPanel.add(scroll, BorderLayout.CENTER);
         cuerpo.add(vacunasPanel, BorderLayout.CENTER);
         contenido.add(cuerpo, BorderLayout.CENTER);

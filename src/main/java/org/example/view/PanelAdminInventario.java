@@ -101,75 +101,165 @@ public class PanelAdminInventario {
         }
         body.add(stats,BorderLayout.NORTH);
 
-        // ── Cuadrícula de cajas (diseño) ─────────────────────
-        Color[] paleta = {
-            new Color(59, 130, 246),  // azul
-            new Color(168, 85, 247),  // violeta
-            new Color(34, 197, 94),   // verde
-            new Color(20, 184, 166),  // teal
-            new Color(251, 146, 60),  // naranja
-            new Color(239, 68, 68),   // rojo
-        };
-        int totalCards = Math.max(lista.size(), 6);
-        int gridCols = 3;
-        int gridRows = (totalCards + gridCols - 1) / gridCols;
-        JPanel grid = new JPanel(new GridLayout(gridRows, gridCols, 16, 16));
-        grid.setBackground(C[0]);
-        for (int idx = 0; idx < totalCards; idx++) {
-            Color color = paleta[idx % paleta.length];
-            JPanel card = new JPanel(new BorderLayout(0, 0));
-            card.setBackground(C[2]);
-            card.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(0, 4, 0, 0, color),
-                    BorderFactory.createCompoundBorder(
-                            BorderFactory.createLineBorder(C[9], 1),
-                            BorderFactory.createEmptyBorder(14, 14, 14, 14))));
-            if (idx < lista.size()) {
-                // botones editar/eliminar en el card real
-                Productos p = lista.get(idx);
-                JPanel footer = new JPanel(new GridLayout(1, 2, 8, 0));
-                footer.setBackground(C[2]);
-                footer.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
-                JButton btnEdit = new JButton("Editar");
-                btnEdit.setFont(new Font("Arial", Font.BOLD, 11));
-                btnEdit.setBackground(new Color(37, 99, 235)); btnEdit.setForeground(Color.WHITE);
-                btnEdit.setOpaque(true); btnEdit.setBorderPainted(false);
-                btnEdit.setBorder(BorderFactory.createEmptyBorder(6, 0, 6, 0));
-                btnEdit.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
-                btnEdit.addActionListener(e -> mostrarFormEditar(p));
-                JButton btnDel = new JButton("Eliminar");
-                btnDel.setFont(new Font("Arial", Font.BOLD, 11));
-                btnDel.setBackground(new Color(220, 38, 38)); btnDel.setForeground(Color.WHITE);
-                btnDel.setOpaque(true); btnDel.setBorderPainted(false);
-                btnDel.setBorder(BorderFactory.createEmptyBorder(6, 0, 6, 0));
-                btnDel.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
-                btnDel.addActionListener(e -> {
-                    int confirm = JOptionPane.showConfirmDialog(panel,
-                            "¿Eliminar \"" + p.getNombre() + "\" del inventario?",
-                            "Confirmar eliminacion", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-                    if (confirm == JOptionPane.YES_OPTION) { ctrl.eliminarProducto(p.getId(), panel); construir(); }
-                });
-                footer.add(btnEdit); footer.add(btnDel);
-                card.add(footer, BorderLayout.SOUTH);
-            }
-            JPanel placeholder = new JPanel(new BorderLayout());
-            placeholder.setBackground(C[4]);
-            placeholder.setPreferredSize(new Dimension(0, 130));
-            card.add(placeholder, BorderLayout.CENTER);
-            grid.add(card);
+        // ── Tabla de productos ────────────────────────────────
+        String[] cols = {"Foto", "Nombre", "Tipo", "Marca", "Precio", "Stock", "Acciones"};
+        Object[][] filas = new Object[lista.size()][7];
+        for (int i = 0; i < lista.size(); i++) {
+            Productos p = lista.get(i);
+            filas[i][0] = p.getFoto();
+            filas[i][1] = p.getNombre()  != null ? p.getNombre()  : "-";
+            filas[i][2] = p.getTipo()    != null ? p.getTipo()    : "-";
+            filas[i][3] = p.getMarca()   != null ? p.getMarca()   : "-";
+            filas[i][4] = p.getPrecio()  != null ? "$ " + p.getPrecio().toPlainString() : "-";
+            filas[i][5] = p.getStock()   != null ? p.getStock()   : 0;
+            filas[i][6] = p;
         }
 
-        JScrollPane gridScroll = new JScrollPane(grid);
-        gridScroll.setBorder(null);
-        gridScroll.getViewport().setBackground(C[0]);
+        javax.swing.table.DefaultTableModel modelo = new javax.swing.table.DefaultTableModel(filas, cols) {
+            @Override public boolean isCellEditable(int r, int c) { return c == 6; }
+            @Override public Class<?> getColumnClass(int c) {
+                if (c == 0) return byte[].class;
+                if (c == 5) return Integer.class;
+                return Object.class;
+            }
+        };
+
+        JTable tabla = new JTable(modelo);
+        tabla.setRowHeight(54);
+        tabla.setFont(new Font("Arial", Font.PLAIN, 13));
+        tabla.setBackground(C[2]);
+        tabla.setForeground(C[6]);
+        tabla.setGridColor(C[9]);
+        tabla.setShowGrid(true);
+        tabla.setSelectionBackground(C[4]);
+        tabla.setFocusable(false);
+
+        // Header
+        javax.swing.table.JTableHeader header = tabla.getTableHeader();
+        header.setFont(new Font("Arial", Font.BOLD, 12));
+        header.setBackground(C[1]);
+        header.setForeground(Color.WHITE);
+        header.setReorderingAllowed(false);
+        ((javax.swing.table.DefaultTableCellRenderer) header.getDefaultRenderer())
+                .setHorizontalAlignment(SwingConstants.CENTER);
+
+        // Anchos de columna
+        int[] anchos = {58, 180, 110, 110, 110, 70, 150};
+        for (int i = 0; i < anchos.length; i++)
+            tabla.getColumnModel().getColumn(i).setPreferredWidth(anchos[i]);
+
+        // ── Renderer foto ────────────────────────────────────
+        tabla.getColumnModel().getColumn(0).setCellRenderer((t, val, sel, foc, row, col) -> {
+            JLabel lbl = new JLabel();
+            lbl.setHorizontalAlignment(SwingConstants.CENTER);
+            lbl.setOpaque(true);
+            lbl.setBackground(sel ? C[4] : C[2]);
+            byte[] bytes = (byte[]) val;
+            if (bytes != null && bytes.length > 0) {
+                try {
+                    BufferedImage img = ImageIO.read(new ByteArrayInputStream(bytes));
+                    if (img != null)
+                        lbl.setIcon(new ImageIcon(img.getScaledInstance(44, 44, Image.SCALE_SMOOTH)));
+                } catch (Exception ignored) {}
+            }
+            if (lbl.getIcon() == null) {
+                lbl.setText("📦");
+                lbl.setFont(new Font("Arial", Font.PLAIN, 22));
+            }
+            return lbl;
+        });
+
+        // ── Renderer stock (color según cantidad) ─────────────
+        tabla.getColumnModel().getColumn(5).setCellRenderer((t, val, sel, foc, row, col) -> {
+            int stock = val instanceof Integer ? (Integer) val : 0;
+            JLabel lbl = new JLabel(String.valueOf(stock), SwingConstants.CENTER);
+            lbl.setFont(new Font("Arial", Font.BOLD, 13));
+            lbl.setOpaque(true);
+            lbl.setBackground(sel ? C[4] : C[2]);
+            if      (stock == 0)  lbl.setForeground(new Color(220, 38, 38));
+            else if (stock < 10)  lbl.setForeground(new Color(234, 88, 12));
+            else                  lbl.setForeground(new Color(22, 163, 74));
+            return lbl;
+        });
+
+        // ── Renderer acciones ─────────────────────────────────
+        class AccionRenderer extends JPanel implements javax.swing.table.TableCellRenderer {
+            AccionRenderer() {
+                setLayout(new FlowLayout(FlowLayout.CENTER, 6, 0));
+                setOpaque(true);
+            }
+            @Override
+            public Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean foc, int row, int col) {
+                removeAll();
+                setBackground(sel ? C[4] : C[2]);
+                JButton e = new JButton("Editar");
+                e.setFont(new Font("Arial", Font.BOLD, 11));
+                e.setBackground(new Color(37, 99, 235)); e.setForeground(Color.WHITE);
+                e.setOpaque(true); e.setBorderPainted(false);
+                e.setBorder(BorderFactory.createEmptyBorder(5, 12, 5, 12));
+                JButton d = new JButton("Eliminar");
+                d.setFont(new Font("Arial", Font.BOLD, 11));
+                d.setBackground(new Color(220, 38, 38)); d.setForeground(Color.WHITE);
+                d.setOpaque(true); d.setBorderPainted(false);
+                d.setBorder(BorderFactory.createEmptyBorder(5, 12, 5, 12));
+                add(e); add(d);
+                return this;
+            }
+        }
+
+        class AccionEditor extends javax.swing.DefaultCellEditor {
+            private JPanel pnl = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 0));
+            AccionEditor() {
+                super(new JCheckBox());
+                pnl.setOpaque(true);
+                setClickCountToStart(1);
+            }
+            @Override
+            public Component getTableCellEditorComponent(JTable t, Object val, boolean sel, int row, int col) {
+                pnl.removeAll();
+                pnl.setBackground(C[4]);
+                Productos prod = (Productos) val;
+                JButton btnE = new JButton("Editar");
+                btnE.setFont(new Font("Arial", Font.BOLD, 11));
+                btnE.setBackground(new Color(37, 99, 235)); btnE.setForeground(Color.WHITE);
+                btnE.setOpaque(true); btnE.setBorderPainted(false);
+                btnE.setBorder(BorderFactory.createEmptyBorder(5, 12, 5, 12));
+                btnE.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                btnE.addActionListener(e -> { stopCellEditing(); mostrarFormEditar(prod); });
+                JButton btnD = new JButton("Eliminar");
+                btnD.setFont(new Font("Arial", Font.BOLD, 11));
+                btnD.setBackground(new Color(220, 38, 38)); btnD.setForeground(Color.WHITE);
+                btnD.setOpaque(true); btnD.setBorderPainted(false);
+                btnD.setBorder(BorderFactory.createEmptyBorder(5, 12, 5, 12));
+                btnD.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                btnD.addActionListener(e -> {
+                    stopCellEditing();
+                    int ok = JOptionPane.showConfirmDialog(panel,
+                            "¿Eliminar \"" + prod.getNombre() + "\" del inventario?",
+                            "Confirmar", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                    if (ok == JOptionPane.YES_OPTION) { ctrl.eliminarProducto(prod.getId(), panel); construir(); }
+                });
+                pnl.add(btnE); pnl.add(btnD);
+                return pnl;
+            }
+            @Override public Object getCellEditorValue() { return null; }
+        }
+
+        tabla.getColumnModel().getColumn(6).setCellRenderer(new AccionRenderer());
+        tabla.getColumnModel().getColumn(6).setCellEditor(new AccionEditor());
+
+        // Centrar columnas de texto
+        javax.swing.table.DefaultTableCellRenderer centrado = new javax.swing.table.DefaultTableCellRenderer();
+        centrado.setHorizontalAlignment(SwingConstants.CENTER);
+        for (int i : new int[]{2, 3, 4}) tabla.getColumnModel().getColumn(i).setCellRenderer(centrado);
+
+        JScrollPane gridScroll = new JScrollPane(tabla);
+        gridScroll.setBorder(BorderFactory.createLineBorder(C[9], 1));
+        gridScroll.getViewport().setBackground(C[2]);
         gridScroll.getVerticalScrollBar().setUnitIncrement(16);
         body.add(gridScroll, BorderLayout.CENTER);
 
-        JScrollPane outerScroll = new JScrollPane(body);
-        outerScroll.setBorder(null); outerScroll.getViewport().setBackground(C[0]);
-        outerScroll.getVerticalScrollBar().setUnitIncrement(16);
-        outerScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        c.add(outerScroll, BorderLayout.CENTER);
+        c.add(body, BorderLayout.CENTER);
         return c;
     }
 
