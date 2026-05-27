@@ -5,6 +5,7 @@ import org.example.controller.VacunaAdminController;
 import org.example.model.Control_vacunas;
 import org.example.model.Mascotas;
 import org.example.model.Vacunas;
+import org.example.service.CorreoService;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -362,6 +363,47 @@ public class PanelAdminVacunas {
                 else          ctrl.guardar(cv);
                 dialog.dispose();
                 recargar();
+
+                // ── Enviar correo al dueño si hay próxima dosis ──────────
+                boolean tieneCorreo = mascSel.getCliente() != null
+                        && mascSel.getCliente().getCorreo() != null
+                        && !mascSel.getCliente().getCorreo().isBlank();
+
+                if (cv.getProximaDosis() != null && tieneCorreo) {
+                    final String correo       = mascSel.getCliente().getCorreo();
+                    final String nombreDueno  = mascSel.getCliente().getNombre();
+                    final String nombreMascota = mascSel.getNombre();
+                    final String nombreVacuna  = vacSel.getNombre();
+                    final java.time.LocalDate fechaAplic = cv.getFechaAplicacion();
+                    final java.time.LocalDate proxDosis  = cv.getProximaDosis();
+
+                    new SwingWorker<Void, Void>() {
+                        @Override
+                        protected Void doInBackground() throws Exception {
+                            String asunto = "Recordatorio de vacuna para " + nombreMascota + " — Kampets";
+                            String cuerpo = construirCorreoVacuna(nombreDueno, nombreMascota,
+                                    nombreVacuna, fechaAplic, proxDosis);
+                            CorreoService.enviarCorreoGeneral(correo, nombreDueno, asunto, cuerpo);
+                            return null;
+                        }
+                        @Override
+                        protected void done() {
+                            try {
+                                get();
+                                JOptionPane.showMessageDialog(panel,
+                                        "<html><b>✅ Guardado correctamente</b><br>" +
+                                        "Correo enviado a <i>" + correo + "</i><br>" +
+                                        "con el recordatorio de la próxima dosis.</html>",
+                                        "Correo enviado", JOptionPane.INFORMATION_MESSAGE);
+                            } catch (Exception ex) {
+                                JOptionPane.showMessageDialog(panel,
+                                        "<html><b>Vacuna guardada</b>, pero no se pudo enviar el correo:<br>" +
+                                        ex.getMessage() + "</html>",
+                                        "Aviso", JOptionPane.WARNING_MESSAGE);
+                            }
+                        }
+                    }.execute();
+                }
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(dialog, "Error al guardar: " + ex.getMessage());
             }
@@ -382,5 +424,63 @@ public class PanelAdminVacunas {
         b.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(C[9], 1),
                 BorderFactory.createEmptyBorder(7, 14, 7, 14)));
+    }
+
+    private String construirCorreoVacuna(String nombreDueno, String nombreMascota,
+                                         String nombreVacuna,
+                                         java.time.LocalDate fechaAplic,
+                                         java.time.LocalDate proxDosis) {
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy",
+                new java.util.Locale("es", "CO"));
+        String fechaAplicStr = fechaAplic != null ? fechaAplic.format(fmt) : "—";
+        String proxDosisStr  = proxDosis  != null ? proxDosis.format(fmt)  : "—";
+
+        return "<!DOCTYPE html><html><body style='font-family:Arial,sans-serif;" +
+                "background:#f0f8f4;margin:0;padding:20px'>" +
+                "<div style='max-width:520px;margin:auto;background:#fff;" +
+                "border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.1)'>" +
+
+                // Header verde
+                "<div style='background:#166534;padding:28px 32px'>" +
+                "<h2 style='color:#fff;margin:0;font-size:22px'>🐾 Kampets Veterinaria</h2>" +
+                "<p style='color:#bbf7d0;margin:6px 0 0'>Recordatorio de vacunación</p>" +
+                "</div>" +
+
+                // Cuerpo
+                "<div style='padding:28px 32px'>" +
+                "<p style='color:#374151;font-size:15px'>Hola <strong>" + nombreDueno + "</strong>,</p>" +
+                "<p style='color:#374151'>Queremos recordarte que se ha actualizado el plan de vacunación " +
+                "de tu mascota <strong>" + nombreMascota + "</strong>.</p>" +
+
+                // Tabla de info
+                "<div style='background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;" +
+                "padding:20px;margin:20px 0'>" +
+                "<table style='width:100%;border-collapse:collapse'>" +
+                "<tr><td style='color:#6b7280;padding:6px 0;font-size:13px'>Mascota</td>" +
+                "<td style='color:#111827;font-weight:bold;font-size:13px'>" + nombreMascota + "</td></tr>" +
+                "<tr><td style='color:#6b7280;padding:6px 0;font-size:13px'>Vacuna</td>" +
+                "<td style='color:#111827;font-weight:bold;font-size:13px'>" + nombreVacuna + "</td></tr>" +
+                "<tr><td style='color:#6b7280;padding:6px 0;font-size:13px'>Fecha aplicación</td>" +
+                "<td style='color:#111827;font-weight:bold;font-size:13px'>" + fechaAplicStr + "</td></tr>" +
+                "<tr><td style='color:#6b7280;padding:6px 0;font-size:13px'>Próxima dosis</td>" +
+                "<td style='color:#166534;font-weight:bold;font-size:14px'>" + proxDosisStr + "</td></tr>" +
+                "</table></div>" +
+
+                "<p style='color:#374151;font-size:13px'>Te recomendamos agendar una cita en Kampets " +
+                "antes de esa fecha para mantener a <strong>" + nombreMascota +
+                "</strong> protegido/a.</p>" +
+
+                "<div style='text-align:center;margin:24px 0'>" +
+                "<a href='#' style='background:#166534;color:#fff;padding:12px 28px;" +
+                "border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px'>" +
+                "Agendar cita</a></div>" +
+                "</div>" +
+
+                // Footer
+                "<div style='background:#f9fafb;padding:16px 32px;border-top:1px solid #e5e7eb'>" +
+                "<p style='color:#9ca3af;font-size:11px;text-align:center;margin:0'>" +
+                "Kampets Veterinaria &nbsp;·&nbsp; Este correo se generó automáticamente</p>" +
+                "</div>" +
+                "</div></body></html>";
     }
 }

@@ -383,7 +383,7 @@ public class PanelVacunas {
         left.setBackground(bgBanner);
 
         int n = pendientes.size();
-        JLabel titulo = new JLabel("⚠  " + n + " vacuna" + (n > 1 ? "s requieren" : " requiere") + " atención");
+        JLabel titulo = new JLabel(" " + n + " vacuna" + (n > 1 ? "s requieren" : " requiere") + " atención");
         titulo.setFont(new Font("Arial", Font.BOLD, 12));
         titulo.setForeground(tituloCol);
         left.add(titulo);

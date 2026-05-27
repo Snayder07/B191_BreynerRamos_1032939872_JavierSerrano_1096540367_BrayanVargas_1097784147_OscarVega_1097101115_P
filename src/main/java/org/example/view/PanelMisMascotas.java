@@ -418,197 +418,227 @@ public class PanelMisMascotas {
 
         JDialog dlg = new JDialog((Frame) SwingUtilities.getWindowAncestor(panel),
                 "Agregar mascota", true);
-        dlg.setSize(420, 400);
+        dlg.setSize(460, 560);
         dlg.setLocationRelativeTo(panel);
+        dlg.setLayout(new BorderLayout());
 
+        // ── Encabezado ──────────────────────────────────────────────
+        JPanel header = new JPanel(new BorderLayout());
+        header.setBackground(C[1]);
+        header.setBorder(BorderFactory.createEmptyBorder(18, 24, 18, 24));
+        JLabel titulo = lbl("Nueva mascota", 15, Font.BOLD, C[5]);
+        JLabel subtit = lbl("Completa los datos de tu mascota", 11, Font.PLAIN, C[12]);
+        JPanel headerText = new JPanel(new GridLayout(2,1,0,2));
+        headerText.setBackground(C[1]);
+        headerText.add(titulo);
+        headerText.add(subtit);
+        header.add(headerText, BorderLayout.CENTER);
+        dlg.add(header, BorderLayout.NORTH);
+
+        // ── Formulario (scrollable) ──────────────────────────────────
         JPanel form = new JPanel();
         form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
         form.setBackground(C[2]);
-        form.setBorder(BorderFactory.createEmptyBorder(24,28,24,28));
+        form.setBorder(BorderFactory.createEmptyBorder(20, 24, 8, 24));
+
+        // helper local para labels alineados a la izquierda
+        // (reutilizamos lbl() y forzamos LEFT_ALIGNMENT)
 
         // Nombre
-        form.add(lbl("Nombre de la mascota", 12, Font.BOLD, C[6]));
+        JLabel lNombre = lbl("Nombre de la mascota", 12, Font.BOLD, C[6]);
+        lNombre.setAlignmentX(Component.LEFT_ALIGNMENT);
+        form.add(lNombre);
         form.add(Box.createVerticalStrut(6));
         JTextField tfNombre = new JTextField();
-        tfNombre.setFont(new Font("Arial",Font.PLAIN,13));
-        tfNombre.setMaximumSize(new Dimension(Integer.MAX_VALUE,46));
+        tfNombre.setFont(new Font("Arial", Font.PLAIN, 13));
+        tfNombre.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+        tfNombre.setAlignmentX(Component.LEFT_ALIGNMENT);
         tfNombre.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(C[9],1),
-                BorderFactory.createEmptyBorder(6,10,6,10)));
-        form.add(tfNombre); form.add(Box.createVerticalStrut(14));
+                BorderFactory.createLineBorder(C[9], 1),
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)));
+        form.add(tfNombre);
+        form.add(Box.createVerticalStrut(16));
 
-        // Especie — cargada desde BD + opción "Otro..."
-        form.add(lbl("Especie", 12, Font.BOLD, C[6]));
+        // Especie
+        JLabel lEspecie = lbl("Especie", 12, Font.BOLD, C[6]);
+        lEspecie.setAlignmentX(Component.LEFT_ALIGNMENT);
+        form.add(lEspecie);
         form.add(Box.createVerticalStrut(6));
         JComboBox<Object> cbEspecie = new JComboBox<>();
-        cbEspecie.setFont(new Font("Arial",Font.PLAIN,13));
-        cbEspecie.setMaximumSize(new Dimension(Integer.MAX_VALUE,46));
+        cbEspecie.setFont(new Font("Arial", Font.PLAIN, 13));
+        cbEspecie.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+        cbEspecie.setAlignmentX(Component.LEFT_ALIGNMENT);
         List<Especies> especies = ctrl.listarEspecies();
         for (Especies esp : especies) cbEspecie.addItem(esp);
-        cbEspecie.addItem("Otro...");   // sentinel al final
+        cbEspecie.addItem("Otro...");
         cbEspecie.setRenderer(new DefaultListCellRenderer() {
             public Component getListCellRendererComponent(JList<?> list, Object value,
                                                           int index, boolean isSelected, boolean cellHasFocus) {
-                super.getListCellRendererComponent(list,value,index,isSelected,cellHasFocus);
-                if (value instanceof Especies) setText(((Especies)value).getNombre());
-                // "Otro..." String se muestra tal cual
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof Especies) setText(((Especies) value).getNombre());
                 return this;
             }
         });
-        form.add(cbEspecie); form.add(Box.createVerticalStrut(6));
+        form.add(cbEspecie);
+        form.add(Box.createVerticalStrut(6));
 
-        // Campo para escribir la especie/raza cuando se elige "Otro..."
-        JLabel lOtra = lbl("Cual es la especie/raza?", 12, Font.BOLD, C[6]);
+        // Especie personalizada (visible solo si "Otro...")
+        JLabel lOtra = lbl("¿Cuál es la especie/raza?", 12, Font.BOLD, C[6]);
         lOtra.setAlignmentX(Component.LEFT_ALIGNMENT);
-        lOtra.setBorder(BorderFactory.createEmptyBorder(8, 0, 4, 0));
+        lOtra.setBorder(BorderFactory.createEmptyBorder(6, 0, 4, 0));
         lOtra.setVisible(false);
-
         JTextField tfOtraEspecie = new JTextField();
         tfOtraEspecie.setFont(new Font("Arial", Font.PLAIN, 13));
-        tfOtraEspecie.setPreferredSize(new Dimension(340, 36));
-        tfOtraEspecie.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
+        tfOtraEspecie.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
         tfOtraEspecie.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(C[9], 1),
                 BorderFactory.createEmptyBorder(6, 10, 6, 10)));
         tfOtraEspecie.setAlignmentX(Component.LEFT_ALIGNMENT);
         tfOtraEspecie.setVisible(false);
-
         form.add(lOtra);
         form.add(tfOtraEspecie);
-        form.add(Box.createVerticalStrut(8));
+        form.add(Box.createVerticalStrut(10));
 
-        cbEspecie.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                boolean esOtro = "Otro...".equals(cbEspecie.getSelectedItem());
-                lOtra.setVisible(esOtro);
-                tfOtraEspecie.setVisible(esOtro);
-                dlg.pack();
-                dlg.setLocationRelativeTo(panel);
-            }
+        cbEspecie.addActionListener(e -> {
+            boolean esOtro = "Otro...".equals(cbEspecie.getSelectedItem());
+            lOtra.setVisible(esOtro);
+            tfOtraEspecie.setVisible(esOtro);
+            form.revalidate();
         });
 
-        // Fecha con JDateChooser
-        form.add(lbl("Fecha de nacimiento", 12, Font.BOLD, C[6]));
+        // Fecha de nacimiento
+        JLabel lFecha = lbl("Fecha de nacimiento", 12, Font.BOLD, C[6]);
+        lFecha.setAlignmentX(Component.LEFT_ALIGNMENT);
+        form.add(lFecha);
         form.add(Box.createVerticalStrut(6));
         JDateChooser dateChooser = new JDateChooser();
-        dateChooser.setFont(new Font("Arial",Font.PLAIN,13));
-        dateChooser.setMaximumSize(new Dimension(Integer.MAX_VALUE,46));
+        dateChooser.setFont(new Font("Arial", Font.PLAIN, 13));
+        dateChooser.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+        dateChooser.setAlignmentX(Component.LEFT_ALIGNMENT);
         dateChooser.setDateFormatString("yyyy-MM-dd");
-        dateChooser.setBorder(BorderFactory.createLineBorder(C[9],1));
-        form.add(dateChooser); form.add(Box.createVerticalStrut(14));
+        dateChooser.setBorder(BorderFactory.createLineBorder(C[9], 1));
+        form.add(dateChooser);
+        form.add(Box.createVerticalStrut(16));
 
         // Sexo
-        form.add(lbl("Sexo", 12, Font.BOLD, C[6]));
+        JLabel lSexo = lbl("Sexo", 12, Font.BOLD, C[6]);
+        lSexo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        form.add(lSexo);
         form.add(Box.createVerticalStrut(6));
-        JComboBox<String> cbSexo = new JComboBox<>(new String[]{"Macho","Hembra"});
-        cbSexo.setFont(new Font("Arial",Font.PLAIN,13));
-        cbSexo.setMaximumSize(new Dimension(Integer.MAX_VALUE,46));
-        form.add(cbSexo); form.add(Box.createVerticalStrut(14));
+        JComboBox<String> cbSexo = new JComboBox<>(new String[]{"Macho", "Hembra"});
+        cbSexo.setFont(new Font("Arial", Font.PLAIN, 13));
+        cbSexo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+        cbSexo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        form.add(cbSexo);
+        form.add(Box.createVerticalStrut(16));
 
         // Característica diferenciadora
-        form.add(lbl("Característica (si hay duplicado)", 12, Font.BOLD, C[6]));
+        JLabel lCar = lbl("Característica (si hay duplicado)", 12, Font.BOLD, C[6]);
+        lCar.setAlignmentX(Component.LEFT_ALIGNMENT);
+        form.add(lCar);
         form.add(Box.createVerticalStrut(6));
         JTextField tfCaracteristica = new JTextField();
-        tfCaracteristica.setFont(new Font("Arial",Font.PLAIN,13));
-        tfCaracteristica.setMaximumSize(new Dimension(Integer.MAX_VALUE,46));
-        tfCaracteristica.setToolTipText("Ej: pelaje dorado, collar azul — solo si hay otra mascota con igual nombre y especie");
-        final Color bordeNormalCar = C[9];
-        final Color bordeErrorCar  = new Color(220,38,38);
+        tfCaracteristica.setFont(new Font("Arial", Font.PLAIN, 13));
+        tfCaracteristica.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+        tfCaracteristica.setAlignmentX(Component.LEFT_ALIGNMENT);
+        final Color bordeNormal = C[9];
+        final Color bordeError  = new Color(220, 38, 38);
         tfCaracteristica.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(bordeNormalCar,1),
-                BorderFactory.createEmptyBorder(6,10,6,10)));
-        JLabel lblCarHint = lbl("<html><i>Solo necesaria si ya existe otra mascota con el mismo nombre y especie.</i></html>", 10, Font.PLAIN, C[7]);
+                BorderFactory.createLineBorder(bordeNormal, 1),
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)));
+        JLabel lblCarHint = lbl("<html><i>Solo necesaria si ya existe otra mascota con el mismo nombre y especie.</i></html>",
+                10, Font.PLAIN, C[7]);
         lblCarHint.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JLabel lblCarError = lbl("", 11, Font.BOLD, new Color(220,38,38));
+        JLabel lblCarError = lbl("", 11, Font.BOLD, new Color(220, 38, 38));
         lblCarError.setAlignmentX(Component.LEFT_ALIGNMENT);
         lblCarError.setVisible(false);
-        // Limpiar error al escribir
         tfCaracteristica.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             void limpiar() {
                 tfCaracteristica.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(bordeNormalCar,1), BorderFactory.createEmptyBorder(6,10,6,10)));
+                        BorderFactory.createLineBorder(bordeNormal, 1), BorderFactory.createEmptyBorder(6, 10, 6, 10)));
                 lblCarError.setVisible(false);
             }
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { limpiar(); }
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { limpiar(); }
+            public void insertUpdate(javax.swing.event.DocumentEvent e)  { limpiar(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e)  { limpiar(); }
             public void changedUpdate(javax.swing.event.DocumentEvent e) { limpiar(); }
         });
-        form.add(tfCaracteristica); form.add(Box.createVerticalStrut(4));
-        form.add(lblCarHint); form.add(Box.createVerticalStrut(2));
-        form.add(lblCarError); form.add(Box.createVerticalStrut(14));
+        form.add(tfCaracteristica);
+        form.add(Box.createVerticalStrut(4));
+        form.add(lblCarHint);
+        form.add(Box.createVerticalStrut(2));
+        form.add(lblCarError);
+        form.add(Box.createVerticalStrut(8));
 
-        // Botones
-        JPanel bots = new JPanel(new FlowLayout(FlowLayout.RIGHT,10,0));
-        bots.setBackground(C[2]);
+        JScrollPane scroll = new JScrollPane(form);
+        scroll.setBorder(null);
+        scroll.getViewport().setBackground(C[2]);
+        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.getVerticalScrollBar().setUnitIncrement(10);
+        dlg.add(scroll, BorderLayout.CENTER);
 
-        JButton btnCancel = btn("Cancelar",C[4],C[1],true);
+        // ── Botones (fijos abajo) ────────────────────────────────────
+        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 14));
+        footer.setBackground(C[2]);
+        footer.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, C[9]));
+
+        JButton btnCancel = btn("Cancelar", C[4], C[6], false);
         btnCancel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(C[9],1),
-                BorderFactory.createEmptyBorder(8,16,8,16)));
-        btnCancel.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) { dlg.dispose(); }
-        });
+                BorderFactory.createLineBorder(C[9], 1),
+                BorderFactory.createEmptyBorder(8, 20, 8, 20)));
+        btnCancel.addActionListener(e -> dlg.dispose());
 
-        JButton btnGuardar = btn("Guardar",C[1],C[5],false);
-        btnGuardar.setFont(new Font("Arial",Font.BOLD,13));
-        btnGuardar.setBorder(BorderFactory.createEmptyBorder(8,16,8,16));
-        btnGuardar.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                String nombre   = tfNombre.getText().trim();
-                String sexo     = (String) cbSexo.getSelectedItem();
-                Cliente cliente = Main.clienteActual;
+        JButton btnGuardar = btn("Guardar mascota", C[1], C[5], false);
+        btnGuardar.setFont(new Font("Arial", Font.BOLD, 13));
+        btnGuardar.setBorder(BorderFactory.createEmptyBorder(9, 22, 9, 22));
+        btnGuardar.addActionListener(e -> {
+            String nombre   = tfNombre.getText().trim();
+            String sexo     = (String) cbSexo.getSelectedItem();
+            Cliente cliente = Main.clienteActual;
 
-                // Resolver especie
-                Especies especie;
-                if ("Otro...".equals(cbEspecie.getSelectedItem())) {
-                    String nombreOtra = tfOtraEspecie.getText().trim();
-                    if (nombreOtra.isEmpty()) {
-                        JOptionPane.showMessageDialog(dlg,
-                                "Escribe el nombre de la especie/raza.",
-                                "Campo vacío", JOptionPane.WARNING_MESSAGE);
-                        return;
-                    }
-                    especie = ctrl.obtenerOCrearEspecie(nombreOtra);
-                    if (especie == null) {
-                        JOptionPane.showMessageDialog(dlg,
-                                "No se pudo guardar la especie. Intenta de nuevo.",
-                                "Error", JOptionPane.ERROR_MESSAGE);
-                        return;
-                    }
-                } else {
-                    especie = (Especies) cbEspecie.getSelectedItem();
+            Especies especie;
+            if ("Otro...".equals(cbEspecie.getSelectedItem())) {
+                String nombreOtra = tfOtraEspecie.getText().trim();
+                if (nombreOtra.isEmpty()) {
+                    JOptionPane.showMessageDialog(dlg, "Escribe el nombre de la especie/raza.",
+                            "Campo vacío", JOptionPane.WARNING_MESSAGE);
+                    return;
                 }
-
-                // Obtener fecha del calendario
-                String fecha = "";
-                if (dateChooser.getDate() != null) {
-                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-                    fecha = sdf.format(dateChooser.getDate());
+                especie = ctrl.obtenerOCrearEspecie(nombreOtra);
+                if (especie == null) {
+                    JOptionPane.showMessageDialog(dlg, "No se pudo guardar la especie. Intenta de nuevo.",
+                            "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
+            } else {
+                especie = (Especies) cbEspecie.getSelectedItem();
+            }
 
-                boolean ok = ctrl.registrarMascota(nombre, especie, cliente, fecha, sexo,
-                        tfCaracteristica.getText(), panel,
-                        () -> {
-                            tfCaracteristica.setBorder(BorderFactory.createCompoundBorder(
-                                    BorderFactory.createLineBorder(bordeErrorCar, 2),
-                                    BorderFactory.createEmptyBorder(6,10,6,10)));
-                            lblCarError.setText("⚠ Obligatorio para distinguir esta mascota");
-                            lblCarError.setVisible(true);
-                            tfCaracteristica.requestFocusInWindow();
-                            form.revalidate();
-                        });
-                if (ok) {
-                    dlg.dispose();
-                    construir();
-                }
+            String fecha = "";
+            if (dateChooser.getDate() != null) {
+                fecha = new SimpleDateFormat("yyyy-MM-dd").format(dateChooser.getDate());
+            }
+
+            boolean ok = ctrl.registrarMascota(nombre, especie, cliente, fecha, sexo,
+                    tfCaracteristica.getText(), panel,
+                    () -> {
+                        tfCaracteristica.setBorder(BorderFactory.createCompoundBorder(
+                                BorderFactory.createLineBorder(bordeError, 2),
+                                BorderFactory.createEmptyBorder(6, 10, 6, 10)));
+                        lblCarError.setText("⚠ Obligatorio para distinguir esta mascota");
+                        lblCarError.setVisible(true);
+                        tfCaracteristica.requestFocusInWindow();
+                        form.revalidate();
+                    });
+            if (ok) {
+                dlg.dispose();
+                construir();
             }
         });
 
-        bots.add(btnCancel); bots.add(btnGuardar);
-        bots.setAlignmentX(Component.LEFT_ALIGNMENT);
-        form.add(bots);
+        footer.add(btnCancel);
+        footer.add(btnGuardar);
+        dlg.add(footer, BorderLayout.SOUTH);
 
-        dlg.add(form);
         dlg.setVisible(true);
     }
 

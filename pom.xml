@@ -28,8 +28,6 @@
             <groupId>com.toedter</groupId>
             <artifactId>jcalendar</artifactId>
             <version>1.4</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/libs/jcalendar-1.4.jar</systemPath>
         </dependency>
         <!--  Apache PDFBox para exportar reportes en PDF  -->
         <dependency>
@@ -45,4 +43,54 @@
             <version>2.0.1</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Instala jcalendar desde libs/ al repo local antes de compilar -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-install-plugin</artifactId>
+                <version>3.1.1</version>
+                <executions>
+                    <execution>
+                        <id>install-jcalendar</id>
+                        <phase>initialize</phase>
+                        <goals><goal>install-file</goal></goals>
+                        <configuration>
+                            <file>${project.basedir}/libs/jcalendar-1.4.jar</file>
+                            <groupId>com.toedter</groupId>
+                            <artifactId>jcalendar</artifactId>
+                            <version>1.4</version>
+                            <packaging>jar</packaging>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Crea el fat JAR con todas las dependencias -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.6.0</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>org.example.view.Main</mainClass>
+                        </manifest>
+                    </archive>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                    <finalName>Kampets</finalName>
+                    <appendAssemblyId>false</appendAssemblyId>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals><goal>single</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>
