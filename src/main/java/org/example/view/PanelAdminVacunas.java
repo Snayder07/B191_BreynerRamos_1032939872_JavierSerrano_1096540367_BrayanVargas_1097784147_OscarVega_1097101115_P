@@ -351,6 +351,16 @@ public class PanelAdminVacunas {
             if (mascSel == null) { JOptionPane.showMessageDialog(dialog, "Seleccione una mascota."); return; }
             if (vacSel  == null) { JOptionPane.showMessageDialog(dialog, "Seleccione una vacuna.");  return; }
             if (dAplic  == null) { JOptionPane.showMessageDialog(dialog, "La fecha de aplicación es obligatoria."); return; }
+            if (dProx != null) {
+                java.time.LocalDate lAplic = dAplic.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+                java.time.LocalDate lProx  = dProx.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+                if (!lProx.isAfter(lAplic)) {
+                    JOptionPane.showMessageDialog(dialog,
+                            "La próxima dosis debe ser una fecha posterior a la fecha de aplicación.",
+                            "Fecha inválida", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+            }
 
             Control_vacunas cv = editando ? existing : new Control_vacunas();
             cv.setMascota(mascSel);
@@ -466,14 +476,9 @@ public class PanelAdminVacunas {
                 "<td style='color:#166534;font-weight:bold;font-size:14px'>" + proxDosisStr + "</td></tr>" +
                 "</table></div>" +
 
-                "<p style='color:#374151;font-size:13px'>Te recomendamos agendar una cita en Kampets " +
-                "antes de esa fecha para mantener a <strong>" + nombreMascota +
-                "</strong> protegido/a.</p>" +
-
-                "<div style='text-align:center;margin:24px 0'>" +
-                "<a href='#' style='background:#166534;color:#fff;padding:12px 28px;" +
-                "border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px'>" +
-                "Agendar cita</a></div>" +
+                "<p style='color:#374151;font-size:13px'>Te recomendamos agendar una cita antes de esa fecha " +
+                "para mantener a <strong>" + nombreMascota + "</strong> protegido/a. " +
+                "Ingresa a la aplicación <strong>Kampets Veterinaria</strong> para agendar tu cita.</p>" +
                 "</div>" +
 
                 // Footer

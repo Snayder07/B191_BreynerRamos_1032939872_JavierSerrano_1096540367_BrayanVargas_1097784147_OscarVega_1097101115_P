@@ -1,7 +1,6 @@
 package org.example.view;
 
 import org.example.model.Citas;
-import org.example.service.CitaService;
 import org.example.service.CorreoService;
 
 import javax.swing.*;
@@ -27,7 +26,6 @@ public class PanelCalendario {
     public JPanel panel;
     private boolean temaOscuro = false;
 
-    private final CitaService citaService = new CitaService();
     private List<Citas> cachedTodas = null;
     private LocalDate semanaInicio = LocalDate.now().with(DayOfWeek.MONDAY);
 
@@ -71,9 +69,10 @@ public class PanelCalendario {
             new Color(210,112,5),  new Color(182,15,55),  new Color(4,144,100),
             new Color(54,124,240), new Color(160,78,240), new Color(228,80,8),
     };
-    private static final Color COL_ALTA  = new Color(200,30,30);
-    private static final Color COL_MEDIA = new Color(210,120,5);
-    private static final Color COL_BAJA  = new Color(20,125,72);
+    private static final Color COL_ALTA   = new Color(200,30,30);
+    private static final Color COL_MEDIA  = new Color(210,120,5);
+    private static final Color COL_BAJA   = new Color(20,125,72);
+    private static final Color COL_VACUNA = new Color(109,40,217);
 
     private List<CitaPos> citasPos = new ArrayList<>();
 
@@ -120,7 +119,7 @@ public class PanelCalendario {
 
         new SwingWorker<List<Citas>, Void>() {
             @Override protected List<Citas> doInBackground() {
-                try { return citaService.listarTodas(); }
+                try { return Citas.consultarTodosBD(); }
                 catch (Exception e) { return Collections.emptyList(); }
             }
             @Override protected void done() {
@@ -161,9 +160,10 @@ public class PanelCalendario {
 
         JPanel leyenda = new JPanel(new FlowLayout(FlowLayout.RIGHT,12,0));
         leyenda.setOpaque(false);
-        leyenda.add(badge("ALTA",  COL_ALTA));
-        leyenda.add(badge("MEDIA", COL_MEDIA));
-        leyenda.add(badge("BAJA",  COL_BAJA));
+        leyenda.add(badge("ALTA",   COL_ALTA));
+        leyenda.add(badge("MEDIA",  COL_MEDIA));
+        leyenda.add(badge("BAJA",   COL_BAJA));
+        leyenda.add(badge("VACUNA", COL_VACUNA));
 
         JPanel nav = new JPanel(new FlowLayout(FlowLayout.RIGHT,8,0));
         nav.setOpaque(false);
@@ -430,7 +430,10 @@ public class PanelCalendario {
             }
             for(int i=0;i<n;i++){
                 Citas cita=dia.get(i);
-                Color color=colorPorPrioridad(cita,COL_BLOQUE[ci%COL_BLOQUE.length]); ci++;
+                Color color = esVacuna(cita)
+                        ? COL_VACUNA
+                        : colorPorPrioridad(cita, COL_BLOQUE[ci%COL_BLOQUE.length]);
+                ci++;
                 citasPos.add(new CitaPos(cita,color,diaIdx,col[i],maxC[i]));
                 crearYAgregarBloque(cita,color,diaIdx,col[i],maxC[i]);
             }
@@ -478,18 +481,19 @@ public class PanelCalendario {
         DateTimeFormatter fh=DateTimeFormatter.ofPattern("HH:mm");
         DateTimeFormatter fd=DateTimeFormatter.ofPattern("EEE d MMM", new Locale("es","CO"));
 
-        String hora   =cita.getHoraCita().format(fh);
-        String fecha  =cita.getFechaCita().format(fd);
-        String mascota=cita.getMascota()!=null?cita.getMascota().getNombre():"?";
-        String cliente=(cita.getMascota()!=null&&cita.getMascota().getCliente()!=null)
+        String hora    = cita.getHoraCita().format(fh);
+        String fecha   = cita.getFechaCita().format(fd);
+        String mascota = cita.getMascota()!=null?cita.getMascota().getNombre():"?";
+        String cliente = (cita.getMascota()!=null&&cita.getMascota().getCliente()!=null)
                 ?cita.getMascota().getCliente().getNombre():"?";
-        String prio   =getPrioridadTexto(cita);
+        String prio    = getPrioridadTexto(cita);
+        boolean vacuna = esVacuna(cita);
 
         // ── Fila superior: mascota (izq) + hora (der) ──────
         JPanel filaTop=new JPanel(new BorderLayout(3,0));
         filaTop.setOpaque(false);
 
-        JLabel lM=new JLabel(mascota);
+        JLabel lM=new JLabel((vacuna?"💉 ":"")+mascota);
         lM.setFont(new Font("Segoe UI",Font.BOLD,comp?9:11));
         lM.setForeground(Color.WHITE);
         filaTop.add(lM, BorderLayout.CENTER);
@@ -518,7 +522,12 @@ public class PanelCalendario {
             lC.setForeground(new Color(210,248,228)); lC.setAlignmentX(0f);
             centro.add(lC);
 
-            if (prio!=null){
+            if (vacuna) {
+                JLabel lV=new JLabel("Vacunacion");
+                lV.setFont(new Font("Segoe UI",Font.BOLD,9));
+                lV.setForeground(new Color(220,180,255)); lV.setAlignmentX(0f);
+                centro.add(lV);
+            } else if (prio!=null){
                 JLabel lP=new JLabel("! "+prio);
                 lP.setFont(new Font("Segoe UI",Font.BOLD,9));
                 lP.setForeground(new Color(255,255,190)); lP.setAlignmentX(0f);
@@ -534,12 +543,14 @@ public class PanelCalendario {
         b.add(centro, BorderLayout.CENTER);
 
         // Tooltip enriquecido
-        String prioBadge=prio!=null?"<br>Prioridad: <b>"+prio+"</b>":"";
+        String tipoBadge = vacuna
+                ? "<br><b style='color:#c084fc'>💉 Cita de vacunacion</b>"
+                : (prio!=null?"<br>Prioridad: <b>"+prio+"</b>":"");
         b.setToolTipText("<html><b>"+mascota+"</b><br>"
                 +"Fecha: "+fecha+"<br>"
                 +"Hora: <b>"+hora+"</b><br>"
                 +"Cliente: "+cliente
-                +prioBadge
+                +tipoBadge
                 +"<br><i style='color:#aaa'>Clic para editar  |  Arrastra para mover</i>"
                 +"</html>");
         return b;
@@ -800,7 +811,7 @@ public class PanelCalendario {
         if (r==JOptionPane.YES_OPTION){
             try {
                 cita.setFechaCita(nF); cita.setHoraCita(nH);
-                new org.example.repository.CitaRepositoryImpl().actualizar(cita);
+                cita.actualizarBD();
                 enviarNotificacion(cita,aF,aH,nF,nH);
                 // Navegar automáticamente a la semana donde quedó la cita
                 semanaInicio = nF.with(DayOfWeek.MONDAY);
@@ -1085,4 +1096,8 @@ public class PanelCalendario {
     }
 
     private boolean esHoy(LocalDate f){ return f.equals(LocalDate.now()); }
+
+    private boolean esVacuna(Citas c) {
+        return c.getMotivo() != null && c.getMotivo().toLowerCase().contains("vacun");
+    }
 }

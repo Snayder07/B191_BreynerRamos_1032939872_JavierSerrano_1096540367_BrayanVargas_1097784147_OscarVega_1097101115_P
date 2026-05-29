@@ -1,13 +1,7 @@
 package org.example.controller;
 
-import org.example.model.Citas;
-import org.example.model.Empleados;
-import org.example.model.EstadoCita;
-import org.example.model.Mascotas;
-import org.example.service.CitaService;
+import org.example.model.*;
 import org.example.service.CorreoService;
-import org.example.service.EmpleadoService;
-import org.example.service.MascotaService;
 
 import javax.swing.*;
 import java.time.LocalDate;
@@ -18,109 +12,67 @@ import java.util.List;
 
 public class CitaAdminController {
 
-    private final CitaService     citaService     = new CitaService();
-    private final MascotaService  mascotaService  = new MascotaService();
-    private final EmpleadoService empleadoService = new EmpleadoService();
-
     public List<Citas> listarTodas() {
-        try {
-            return citaService.listarTodas();
-        } catch (Exception e) {
-            return Collections.emptyList();
-        }
+        try { return Citas.consultarTodosBD(); }
+        catch (Exception e) { return Collections.emptyList(); }
     }
 
     public List<Citas> listarPorCliente(Integer clienteId) {
-        try {
-            return citaService.listarPorCliente(clienteId);
-        } catch (Exception e) {
-            return Collections.emptyList();
-        }
+        try { return Citas.consultarPorClienteBD(clienteId); }
+        catch (Exception e) { return Collections.emptyList(); }
     }
 
     public List<Citas> listarPasadasPorCliente(Integer clienteId) {
-        try {
-            return citaService.listarPasadasPorCliente(clienteId);
-        } catch (Exception e) {
-            return Collections.emptyList();
-        }
+        try { return Citas.consultarPasadasPorClienteBD(clienteId); }
+        catch (Exception e) { return Collections.emptyList(); }
     }
 
     public List<Citas> listarDeHoy() {
-        try {
-            return citaService.listarDeHoy();
-        } catch (Exception e) {
-            return Collections.emptyList();
-        }
+        try { return Citas.consultarDeHoyBD(); }
+        catch (Exception e) { return Collections.emptyList(); }
     }
 
     public List<Citas> listarCitasVacunas() {
-        try {
-            return citaService.listarCitasVacunas();
-        } catch (Exception e) {
-            return Collections.emptyList();
-        }
+        try { return Citas.consultarVacunasBD(); }
+        catch (Exception e) { return Collections.emptyList(); }
     }
 
     public void cancelarCita(Integer id, JPanel panel) {
         cambiarEstado(id, EstadoCita.CANCELADA, panel);
     }
 
-    /**
-     * Confirma una cita: cambia estado a CONFIRMADA y envia correo al cliente.
-     * Si el correo falla, igual confirma la cita y avisa al admin.
-     */
     public void confirmarCita(Integer id, JPanel panel) {
         try {
-            Citas cita = citaService.buscarPorId(id);
-            if (cita == null) throw new Exception("No se encontró la cita.");
+            Citas cita = Citas.buscarPorIdBD(id);
+            if (cita == null) throw new Exception("No se encontro la cita.");
+            Citas.actualizarEstadoBD(id, EstadoCita.CONFIRMADA);
 
-            citaService.cambiarEstado(id, EstadoCita.CONFIRMADA);
-
-            // Intentar enviar correo de confirmacion
-            String correoDestino = null;
-            String nombreCliente = "cliente";
+            String correoDestino = null, nombreCliente = "cliente";
             String nombreMascota = cita.getMascota() != null ? cita.getMascota().getNombre() : "su mascota";
             if (cita.getMascota() != null && cita.getMascota().getCliente() != null) {
                 correoDestino = cita.getMascota().getCliente().getCorreo();
                 nombreCliente = cita.getMascota().getCliente().getNombre();
             }
-            String fecha = cita.getFechaCita() != null ? cita.getFechaCita().toString() : "—";
-            String hora  = cita.getHoraCita()  != null ? cita.getHoraCita().toString()  : "—";
-
-            String cuerpo =
-                    "<div style='font-family:Arial,sans-serif;max-width:520px;margin:auto;background:#f0fdf4;border-radius:10px;padding:32px;'>" +
-                            "<h2 style='color:#16a34a;margin-bottom:6px;'>\u2705 Cita Confirmada</h2>" +
-                            "<p style='color:#374151;font-size:15px;'>Hola <b>" + nombreCliente + "</b>, tu cita en <b>Kampets Veterinaria</b> ha sido <b>confirmada</b>.</p>" +
-                            "<table style='width:100%;border-collapse:collapse;margin:20px 0;'>" +
-                            "<tr><td style='padding:10px 14px;background:#dcfce7;color:#15803d;font-weight:bold;'>Mascota</td><td style='padding:10px 14px;background:#f0fdf4;'>" + nombreMascota + "</td></tr>" +
-                            "<tr><td style='padding:10px 14px;background:#dcfce7;color:#15803d;font-weight:bold;'>Fecha</td><td style='padding:10px 14px;background:#f0fdf4;'>" + fecha + "</td></tr>" +
-                            "<tr><td style='padding:10px 14px;background:#dcfce7;color:#15803d;font-weight:bold;'>Hora</td><td style='padding:10px 14px;background:#f0fdf4;'>" + hora + "</td></tr>" +
-                            "</table>" +
-                            "<p style='color:#6b7280;font-size:13px;'>Por favor presentate puntualmente. Si necesitas cancelar, contactanos con anticipacion.</p>" +
-                            "<p style='color:#16a34a;font-weight:bold;margin-top:24px;'>Hasta pronto!</p>" +
-                            "</div>";
+            String fecha = cita.getFechaCita() != null ? cita.getFechaCita().toString() : "-";
+            String hora  = cita.getHoraCita()  != null ? cita.getHoraCita().toString()  : "-";
+            String cuerpo = buildCorreo(nombreCliente, nombreMascota, fecha, hora, "CONFIRMADA",
+                    "#16a34a", "Cita Confirmada", "Por favor presentate puntualmente.");
 
             if (correoDestino != null && !correoDestino.isEmpty()) {
-                final String correoFinal  = correoDestino;
-                final String nombreFinal  = nombreCliente;
-                final String cuerpoFinal  = cuerpo;
-                JOptionPane.showMessageDialog(panel,
-                        "Cita confirmada. Enviando correo a " + correoFinal + "...",
+                final String cf = correoDestino, nf = nombreCliente, bf = cuerpo;
+                JOptionPane.showMessageDialog(panel, "Cita confirmada. Enviando correo a " + cf + "...",
                         "Cita confirmada", JOptionPane.INFORMATION_MESSAGE);
                 new Thread(() -> {
-                    try {
-                        CorreoService.enviarCorreoGeneral(correoFinal, nombreFinal, "Confirmación de cita - Kampets", cuerpoFinal);
-                    } catch (Exception mailEx) {
+                    try { CorreoService.enviarCorreoGeneral(cf, nf, "Confirmacion de cita - Kampets", bf); }
+                    catch (Exception ex) {
                         SwingUtilities.invokeLater(() ->
                                 JOptionPane.showMessageDialog(panel,
-                                        "Cita confirmada, pero el correo no se pudo enviar:\n" + mailEx.getMessage(),
+                                        "Cita confirmada, pero el correo no se pudo enviar:\n" + ex.getMessage(),
                                         "Aviso de correo", JOptionPane.WARNING_MESSAGE));
                     }
                 }).start();
             } else {
-                JOptionPane.showMessageDialog(panel,
-                        "Cita confirmada. El cliente no tiene correo registrado.",
+                JOptionPane.showMessageDialog(panel, "Cita confirmada. El cliente no tiene correo registrado.",
                         "Cita confirmada", JOptionPane.INFORMATION_MESSAGE);
             }
         } catch (Exception e) {
@@ -128,88 +80,42 @@ public class CitaAdminController {
         }
     }
 
-    /**
-     * Cambia el estado de una cita y envía correo al cliente notificando el cambio.
-     */
     public void cambiarEstado(Integer id, EstadoCita nuevoEstado, JPanel panel) {
         try {
-            Citas cita = citaService.buscarPorId(id);
-            if (cita == null) throw new Exception("No se encontró la cita.");
+            Citas cita = Citas.buscarPorIdBD(id);
+            if (cita == null) throw new Exception("No se encontro la cita.");
+            Citas.actualizarEstadoBD(id, nuevoEstado);
 
-            citaService.cambiarEstado(id, nuevoEstado);
-
-            // Datos del cliente
-            String correoDestino = null;
-            String nombreCliente = "cliente";
+            String correoDestino = null, nombreCliente = "cliente";
             String nombreMascota = cita.getMascota() != null ? cita.getMascota().getNombre() : "su mascota";
             if (cita.getMascota() != null && cita.getMascota().getCliente() != null) {
                 correoDestino = cita.getMascota().getCliente().getCorreo();
                 nombreCliente = cita.getMascota().getCliente().getNombre();
             }
-            String fecha = cita.getFechaCita() != null ? cita.getFechaCita().toString() : "—";
-            String hora  = cita.getHoraCita()  != null ? cita.getHoraCita().toString()  : "—";
-
             if (correoDestino == null || correoDestino.isEmpty()) {
-                JOptionPane.showMessageDialog(panel,
-                        "Estado actualizado. El cliente no tiene correo registrado.",
+                JOptionPane.showMessageDialog(panel, "Estado actualizado. El cliente no tiene correo registrado.",
                         "Listo", JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
+            String fecha = cita.getFechaCita() != null ? cita.getFechaCita().toString() : "-";
+            String hora  = cita.getHoraCita()  != null ? cita.getHoraCita().toString()  : "-";
 
-            // Definir asunto, color y mensaje según el nuevo estado
-            String asunto, encabezado, colorTitulo, emoji, mensajeExtra;
+            String color, titulo, extra;
             switch (nuevoEstado) {
-                case CONFIRMADA:
-                    asunto       = "Cita confirmada - Kampets";
-                    encabezado   = "Cita Confirmada";
-                    colorTitulo  = "#16a34a";
-                    emoji        = "✅";
-                    mensajeExtra = "Por favor preséntate puntualmente. Si necesitas cancelar, contáctanos con anticipación.";
-                    break;
-                case CANCELADA:
-                    asunto       = "Cita cancelada - Kampets";
-                    encabezado   = "Cita Cancelada";
-                    colorTitulo  = "#dc2626";
-                    emoji        = "❌";
-                    mensajeExtra = "Si deseas reagendar, puedes hacerlo desde la aplicación o contactándonos directamente.";
-                    break;
-                case COMPLETADA:
-                    asunto       = "Cita completada - Kampets";
-                    encabezado   = "Cita Completada";
-                    colorTitulo  = "#2563eb";
-                    emoji        = "🎉";
-                    mensajeExtra = "Gracias por confiar en Kampets Veterinaria. ¡Esperamos ver a tu mascota pronto!";
-                    break;
-                default:
-                    asunto       = "Actualización de cita - Kampets";
-                    encabezado   = "Cita Actualizada";
-                    colorTitulo  = "#d97706";
-                    emoji        = "📋";
-                    mensajeExtra = "Si tienes alguna duda, no dudes en contactarnos.";
+                case CONFIRMADA: color = "#16a34a"; titulo = "Cita Confirmada"; extra = "Por favor presentate puntualmente."; break;
+                case CANCELADA:  color = "#dc2626"; titulo = "Cita Cancelada";  extra = "Si deseas reagendar, puedes contactarnos."; break;
+                case COMPLETADA: color = "#2563eb"; titulo = "Cita Completada"; extra = "Gracias por confiar en Kampets Veterinaria!"; break;
+                default:         color = "#d97706"; titulo = "Cita Actualizada"; extra = "Si tienes alguna duda, contactanos."; break;
             }
-
-            String cuerpo =
-                    "<div style='font-family:Arial,sans-serif;max-width:520px;margin:auto;background:#f0fdf4;border-radius:10px;padding:32px;'>" +
-                            "<h2 style='color:" + colorTitulo + ";margin-bottom:6px;'>" + emoji + " " + encabezado + "</h2>" +
-                            "<p style='color:#374151;font-size:15px;'>Hola <b>" + nombreCliente + "</b>, el estado de tu cita en <b>Kampets Veterinaria</b> ha sido actualizado a <b>" + nuevoEstado.name() + "</b>.</p>" +
-                            "<table style='width:100%;border-collapse:collapse;margin:20px 0;'>" +
-                            "<tr><td style='padding:10px 14px;background:#dcfce7;color:#15803d;font-weight:bold;'>Mascota</td><td style='padding:10px 14px;background:#f0fdf4;'>" + nombreMascota + "</td></tr>" +
-                            "<tr><td style='padding:10px 14px;background:#dcfce7;color:#15803d;font-weight:bold;'>Fecha</td><td style='padding:10px 14px;background:#f0fdf4;'>" + fecha + "</td></tr>" +
-                            "<tr><td style='padding:10px 14px;background:#dcfce7;color:#15803d;font-weight:bold;'>Hora</td><td style='padding:10px 14px;background:#f0fdf4;'>" + hora + "</td></tr>" +
-                            "<tr><td style='padding:10px 14px;background:#dcfce7;color:#15803d;font-weight:bold;'>Estado</td><td style='padding:10px 14px;background:#f0fdf4;font-weight:bold;color:" + colorTitulo + ";'>" + nuevoEstado.name() + "</td></tr>" +
-                            "</table>" +
-                            "<p style='color:#6b7280;font-size:13px;'>" + mensajeExtra + "</p>" +
-                            "<p style='color:#16a34a;font-weight:bold;margin-top:24px;'>¡Hasta pronto! 🐾</p>" +
-                            "</div>";
+            String cuerpo = buildCorreo(nombreCliente, nombreMascota, fecha, hora,
+                    nuevoEstado.name(), color, titulo, extra);
 
             try {
-                CorreoService.enviarCorreoGeneral(correoDestino, nombreCliente, asunto, cuerpo);
-                JOptionPane.showMessageDialog(panel,
-                        "Estado actualizado y correo enviado a " + correoDestino + ".",
+                CorreoService.enviarCorreoGeneral(correoDestino, nombreCliente, titulo + " - Kampets", cuerpo);
+                JOptionPane.showMessageDialog(panel, "Estado actualizado y correo enviado a " + correoDestino + ".",
                         "Listo", JOptionPane.INFORMATION_MESSAGE);
-            } catch (Exception mailEx) {
-                JOptionPane.showMessageDialog(panel,
-                        "Estado actualizado, pero no se pudo enviar el correo.\n" + mailEx.getMessage(),
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(panel, "Estado actualizado, pero no se pudo enviar el correo.\n" + ex.getMessage(),
                         "Aviso", JOptionPane.WARNING_MESSAGE);
             }
         } catch (Exception e) {
@@ -218,19 +124,13 @@ public class CitaAdminController {
     }
 
     public List<Mascotas> listarMascotas() {
-        try {
-            return mascotaService.listarTodas();
-        } catch (Exception e) {
-            return Collections.emptyList();
-        }
+        try { return Mascotas.consultarTodosBD(); }
+        catch (Exception e) { return Collections.emptyList(); }
     }
 
     public List<Empleados> listarEmpleados() {
-        try {
-            return empleadoService.listarTodos();
-        } catch (Exception e) {
-            return Collections.emptyList();
-        }
+        try { return Empleados.consultarTodosBD(); }
+        catch (Exception e) { return Collections.emptyList(); }
     }
 
     public boolean guardarCita(Mascotas mascota, Empleados empleado,
@@ -246,17 +146,13 @@ public class CitaAdminController {
             LocalDate fecha;
             LocalTime hora;
             try { fecha = LocalDate.parse(fechaStr.trim()); }
-            catch (DateTimeParseException e) { throw new Exception("Formato de fecha inválido. Usa: yyyy-MM-dd"); }
-            try { hora = LocalTime.parse(horaStr.trim()); }
-            catch (DateTimeParseException e) { throw new Exception("Formato de hora inválido. Usa: HH:mm"); }
+            catch (DateTimeParseException e) { throw new Exception("Formato de fecha invalido. Usa: yyyy-MM-dd"); }
+            try { hora  = LocalTime.parse(horaStr.trim()); }
+            catch (DateTimeParseException e) { throw new Exception("Formato de hora invalido. Usa: HH:mm"); }
 
-            // Convertir String a EstadoCita
             EstadoCita estado;
-            try {
-                estado = EstadoCita.valueOf(estadoStr.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                estado = EstadoCita.CONFIRMADA;
-            }
+            try { estado = EstadoCita.valueOf(estadoStr.toUpperCase()); }
+            catch (Exception e) { estado = EstadoCita.CONFIRMADA; }
 
             Citas cita = new Citas();
             cita.setMascota(mascota);
@@ -264,12 +160,24 @@ public class CitaAdminController {
             cita.setFechaCita(fecha);
             cita.setHoraCita(hora);
             cita.setEstadoCita(estado);
-            citaService.guardarCita(cita);
+            cita.insertarBD();
             JOptionPane.showMessageDialog(panel, "Cita guardada exitosamente.");
             return true;
         } catch (Exception e) {
             JOptionPane.showMessageDialog(panel, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             return false;
         }
+    }
+
+    private static String buildCorreo(String cliente, String mascota, String fecha, String hora,
+                                      String estado, String color, String titulo, String extra) {
+        return "<div style='font-family:Arial,sans-serif;max-width:520px;margin:auto;background:#f0fdf4;border-radius:10px;padding:32px;'>" +
+                "<h2 style='color:" + color + ";'>" + titulo + "</h2>" +
+                "<p>Hola <b>" + cliente + "</b>, el estado de tu cita en <b>Kampets Veterinaria</b> ha sido actualizado a <b>" + estado + "</b>.</p>" +
+                "<table style='width:100%;border-collapse:collapse;margin:20px 0;'>" +
+                "<tr><td style='padding:10px;background:#dcfce7;font-weight:bold;'>Mascota</td><td style='padding:10px;'>" + mascota + "</td></tr>" +
+                "<tr><td style='padding:10px;background:#dcfce7;font-weight:bold;'>Fecha</td><td style='padding:10px;'>" + fecha + "</td></tr>" +
+                "<tr><td style='padding:10px;background:#dcfce7;font-weight:bold;'>Hora</td><td style='padding:10px;'>" + hora + "</td></tr>" +
+                "</table><p style='color:#6b7280;font-size:13px;'>" + extra + "</p></div>";
     }
 }

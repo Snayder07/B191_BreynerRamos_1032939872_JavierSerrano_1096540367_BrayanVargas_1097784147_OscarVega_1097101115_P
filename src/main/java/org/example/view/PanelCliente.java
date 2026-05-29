@@ -3,7 +3,6 @@ package org.example.view;
 import org.example.controller.CitaAdminController;
 import org.example.model.Citas;
 import org.example.model.Cliente;
-import org.example.repository.ClienteRepositoryImpl;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -550,7 +549,7 @@ public class PanelCliente {
             cli.setDireccion(tfDireccion.getText().trim().isEmpty() ? null : tfDireccion.getText().trim());
 
             try {
-                new ClienteRepositoryImpl().actualizar(cli);
+                cli.actualizarBD();
                 Main.clienteActual = cli;
                 JOptionPane.showMessageDialog(dlg, "Perfil actualizado correctamente.");
                 dlg.dispose();

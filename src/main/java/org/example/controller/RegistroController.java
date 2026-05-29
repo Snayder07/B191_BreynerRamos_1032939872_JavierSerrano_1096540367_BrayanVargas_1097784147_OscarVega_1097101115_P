@@ -13,29 +13,13 @@ public class RegistroController {
                           String telefono, String contrasena,
                           String confirmar, JPanel panel) {
         try {
-            // ✅ Orden correcto — coincide con ClienteService.registrar()
-            clienteService.registrar(
-                    nombre,      // nombre
-                    apellido,    // apellido
-                    correo,      // correo
-                    telefono,    // telefono
-                    contrasena,  // contrasena
-                    confirmar    // confirmar
-            );
-
+            clienteService.registrar(nombre, apellido, correo, telefono, contrasena, confirmar);
             JOptionPane.showMessageDialog(panel,
-                    "¡Cuenta creada exitosamente! Ya puedes iniciar sesión.",
-                    "Registro exitoso",
-                    JOptionPane.INFORMATION_MESSAGE);
-
+                    "Cuenta creada exitosamente. Ya puedes iniciar sesion.",
+                    "Registro exitoso", JOptionPane.INFORMATION_MESSAGE);
             Main.cambiarPantalla("login");
-
         } catch (Exception e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(panel,
-                    e.getMessage(),
-                    "Error al registrar",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(panel, e.getMessage(), "Error al registrar", JOptionPane.ERROR_MESSAGE);
         }
     }
 }

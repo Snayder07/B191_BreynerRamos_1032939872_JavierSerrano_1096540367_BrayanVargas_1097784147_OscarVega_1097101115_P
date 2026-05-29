@@ -2,8 +2,6 @@ package org.example.view;
 
 import org.example.model.Control_vacunas;
 import org.example.model.Mascotas;
-import org.example.service.ControlVacunaService;
-import org.example.service.MascotaService;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -20,8 +18,6 @@ public class PanelVacunas {
     private Mascotas mascotaSeleccionada = null;
     private List<Control_vacunas> cachedVacunas = null;
     private List<Mascotas> cachedMascotas = null;
-    private final ControlVacunaService vacunaService = new ControlVacunaService();
-    private final MascotaService mascotaService = new MascotaService();
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
@@ -71,8 +67,8 @@ public class PanelVacunas {
             protected Object[] doInBackground() {
                 if (Main.clienteActual == null) return new Object[]{Collections.emptyList(), Collections.emptyList()};
                 try {
-                    List<Control_vacunas> vacunas = vacunaService.listarPorCliente(Main.clienteActual.getId());
-                    List<Mascotas> mascotas = mascotaService.listarPorCliente(Main.clienteActual.getId());
+                    List<Control_vacunas> vacunas = Control_vacunas.consultarPorClienteBD(Main.clienteActual.getId());
+                    List<Mascotas> mascotas = Mascotas.consultarPorClienteBD(Main.clienteActual.getId());
                     return new Object[]{vacunas, mascotas};
                 } catch (Exception e) {
                     return new Object[]{Collections.emptyList(), Collections.emptyList()};

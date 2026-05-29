@@ -1,42 +1,60 @@
 package org.example.model;
 
-import jakarta.persistence.*;
+import org.example.util.ConexionBD;
+import javax.swing.JOptionPane;
 import java.math.BigDecimal;
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.List;
 
-@Entity
-@Table(name = "SERVICIOS")
 public class Servicio {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
-    @Column(name = "nombre_se", nullable = false, length = 100)
-    private String nombre;
-
-    @Column(name = "descripcion_se", columnDefinition = "text")
-    private String descripcion;
-
-    @Column(name = "precio_se", precision = 10, scale = 2)
+    private Integer    id;
+    private String     nombre;
+    private String     descripcion;
     private BigDecimal precio;
-
-    @Column(name = "duracion_min", nullable = false)
-    private Integer duracionMin;
+    private Integer    duracionMin;
 
     public Servicio() {}
 
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
+    public Integer    getId()              { return id; }
+    public void       setId(Integer id)    { this.id = id; }
 
-    public String getNombre() { return nombre; }
-    public void setNombre(String nombre) { this.nombre = nombre; }
+    public String  getNombre()             { return nombre; }
+    public void    setNombre(String n)     { this.nombre = n; }
 
-    public String getDescripcion() { return descripcion; }
-    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
+    public String  getDescripcion()        { return descripcion; }
+    public void    setDescripcion(String d){ this.descripcion = d; }
 
-    public BigDecimal getPrecio() { return precio; }
-    public void setPrecio(BigDecimal precio) { this.precio = precio; }
+    public BigDecimal getPrecio()          { return precio; }
+    public void       setPrecio(BigDecimal p) { this.precio = p; }
 
-    public Integer getDuracionMin() { return duracionMin; }
-    public void setDuracionMin(Integer duracionMin) { this.duracionMin = duracionMin; }
+    public Integer getDuracionMin()            { return duracionMin; }
+    public void    setDuracionMin(Integer min) { this.duracionMin = min; }
+
+    // ── Consultas ─────────────────────────────────────────────
+
+    public static List<Servicio> consultarTodosBD() {
+        List<Servicio> lista = new ArrayList<>();
+        ConexionBD bd = new ConexionBD();
+        try {
+            ResultSet rs = bd.consultarBD("SELECT * FROM servicios ORDER BY nombre_se");
+            while (rs.next()) lista.add(mapear(rs));
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Error al consultar servicios: " + e.getMessage());
+        }
+        return lista;
+    }
+
+    // ── Internos ──────────────────────────────────────────────
+
+    static Servicio mapear(ResultSet rs) throws Exception {
+        Servicio s = new Servicio();
+        s.setId(rs.getInt("id"));
+        s.setNombre(rs.getString("nombre_se"));
+        s.setDescripcion(rs.getString("descripcion_se"));
+        s.setPrecio(rs.getBigDecimal("precio_se"));
+        s.setDuracionMin(rs.getInt("duracion_min"));
+        return s;
+    }
 }

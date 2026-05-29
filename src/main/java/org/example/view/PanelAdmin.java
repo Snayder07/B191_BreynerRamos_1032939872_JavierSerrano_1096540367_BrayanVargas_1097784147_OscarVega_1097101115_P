@@ -8,7 +8,7 @@ import org.example.model.Control_vacunas;
 import org.example.model.EstadoCita;
 import org.example.model.Mascotas;
 import org.example.model.Vacunas;
-import org.example.service.EmpleadoService;
+import org.example.model.Empleados;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -27,7 +27,6 @@ public class PanelAdmin {
     public JPanel panel;
     private boolean temaOscuro = false;
 
-    private final EmpleadoService        empleadoService  = new EmpleadoService();
     private final CitaAdminController    citaCtrl         = new CitaAdminController();
     private final VacunaAdminController  vacunaCtrl       = new VacunaAdminController();
 
@@ -287,7 +286,13 @@ public class PanelAdmin {
                     return;
                 }
                 try {
-                    empleadoService.registrarAdmin(nombre, apellido, correo, pass, cargo);
+                    Empleados emp = new Empleados();
+                    emp.setNombre(nombre);
+                    emp.setApellido(apellido);
+                    emp.setCorreo(correo);
+                    emp.setContrasena(pass);
+                    emp.setCargo(cargo);
+                    emp.insertarBD();
                     JOptionPane.showMessageDialog(dlg,
                             " Administrador registrado exitosamente.\n\nCorreo: " + correo,
                             "Éxito", JOptionPane.INFORMATION_MESSAGE);

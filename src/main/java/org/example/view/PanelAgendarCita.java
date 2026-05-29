@@ -5,9 +5,6 @@ import org.example.controller.AgendarCitaController;
 import org.example.model.Empleados;
 import org.example.model.Mascotas;
 import org.example.model.Servicio;
-import org.example.repository.EspecieRepositoryImpl;
-import org.example.service.CitaService;
-
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;

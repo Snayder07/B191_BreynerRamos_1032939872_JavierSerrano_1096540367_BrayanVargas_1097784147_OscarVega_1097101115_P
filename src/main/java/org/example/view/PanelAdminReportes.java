@@ -10,8 +10,6 @@ import org.example.controller.InventarioController;
 import org.example.controller.MascotaAdminController;
 import org.example.controller.VacunaAdminController;
 import org.example.model.*;
-import org.example.service.ClienteService;
-import org.example.service.ControlVacunaService;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -31,8 +29,6 @@ public class PanelAdminReportes {
     private final VacunaAdminController  vacunaCtrl  = new VacunaAdminController();
     private final InventarioController   invCtrl     = new InventarioController();
     private final MascotaAdminController mascotaCtrl = new MascotaAdminController();
-    private final ClienteService         clienteSvc  = new ClienteService();
-    private final ControlVacunaService   vacunaSvc   = new ControlVacunaService();
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
@@ -68,7 +64,7 @@ public class PanelAdminReportes {
         // ── Cargar datos de BD ────────────────────────────────────────
         List<Citas>          citas    = citaCtrl.listarTodas();
         List<Control_vacunas> vacunas = vacunaCtrl.listarTodas();
-        List<Cliente>         clientes = clienteSvc.listarTodos();
+        List<Cliente>         clientes = Cliente.consultarTodosBD();
         long completadas  = citas.stream().filter(ci -> EstadoCita.COMPLETADA.equals(ci.getEstadoCita())).count();
         long canceladas   = citas.stream().filter(ci -> EstadoCita.CANCELADA.equals(ci.getEstadoCita())).count();
 
@@ -263,7 +259,7 @@ public class PanelAdminReportes {
 
     // ── Reporte de usuarios ──────────────────────────────────────────────
     private void generarReporteUsuarios(File archivo) throws IOException {
-        List<Cliente> lista = clienteSvc.listarTodos();
+        List<Cliente> lista = Cliente.consultarTodosBD();
         String[] cols = {"Nombre","Correo","Telefono","Fecha registro"};
         float[]  anchos = {135, 168, 101, 101};  // suma=505 = ancho util A4
 
@@ -283,7 +279,7 @@ public class PanelAdminReportes {
     private void generarReporteGeneral(File archivo) throws IOException {
         List<Citas>           citas    = citaCtrl.listarTodas();
         List<Control_vacunas> vacunas  = vacunaCtrl.listarTodas();
-        List<Cliente>         clientes = clienteSvc.listarTodos();
+        List<Cliente>         clientes = Cliente.consultarTodosBD();
         List<Mascotas>        mascotas = mascotaCtrl.listarTodas();
         List<Productos>       prods    = invCtrl.listarTodos();
         long completadas = citas.stream().filter(ci -> EstadoCita.COMPLETADA.equals(ci.getEstadoCita())).count();

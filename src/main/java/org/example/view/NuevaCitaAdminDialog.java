@@ -2,8 +2,6 @@ package org.example.view;
 
 import com.toedter.calendar.JDateChooser;
 import org.example.model.*;
-import org.example.repository.*;
-import org.example.service.CitaService;
 import org.example.service.CorreoService;
 
 import javax.swing.*;
@@ -81,7 +79,7 @@ public class NuevaCitaAdminDialog extends JDialog {
         root.add(Box.createVerticalStrut(8));
 
         // Combo: elegir mascota existente
-        List<Mascotas> mascotasList = new MascotaRepositoryImpl().buscarTodos();
+        List<Mascotas> mascotasList = Mascotas.consultarTodosBD();
         JComboBox<Object> cbMascota = new JComboBox<>();
         cbMascota.addItem("-- Nueva mascota (no registrada) --");
         for (Mascotas m : mascotasList) cbMascota.addItem(m);
@@ -109,7 +107,7 @@ public class NuevaCitaAdminDialog extends JDialog {
         JTextField tfNombreMascota = campo("");
 
         // Cargar especies desde BD
-        List<Especies> especiesList = new EspecieRepositoryImpl().buscarTodos();
+        List<Especies> especiesList = Especies.consultarTodosBD();
         String[] nombresEspecies = especiesList.stream()
                 .map(Especies::getNombre)
                 .toArray(String[]::new);
@@ -165,12 +163,7 @@ public class NuevaCitaAdminDialog extends JDialog {
         root.add(seccion("Datos de la cita"));
         root.add(Box.createVerticalStrut(8));
 
-        List<Servicio> serviciosList;
-        try {
-            jakarta.persistence.EntityManager emS = org.example.util.JPAUtil.getEntityManager();
-            serviciosList = emS.createQuery("SELECT s FROM Servicio s", Servicio.class).getResultList();
-            emS.close();
-        } catch (Exception ex) { serviciosList = new java.util.ArrayList<>(); }
+        List<Servicio> serviciosList = Servicio.consultarTodosBD();
         JComboBox<Object> cbMotivo = new JComboBox<>();
         cbMotivo.addItem("-- Selecciona un servicio --");
         for (Servicio s : serviciosList) cbMotivo.addItem(s);
@@ -290,7 +283,7 @@ public class NuevaCitaAdminDialog extends JDialog {
         btnCancelar.addActionListener(e -> dispose());
 
         // Cargar empleados para asignar (se usa el admin logueado o el primero disponible)
-        List<Empleados> empleadosList = new EmpleadoRepositoryImpl().buscarTodos();
+        List<Empleados> empleadosList = Empleados.consultarTodosBD();
 
         btnGuardar.addActionListener(e -> {
             try {
@@ -321,7 +314,7 @@ public class NuevaCitaAdminDialog extends JDialog {
                 cliente.setCorreo(correo.isEmpty() ? null : correo.toLowerCase());
                 cliente.setContrasena("kamp" + UUID.randomUUID().toString().substring(0, 6));
                 cliente.setFechaRegistro(LocalDate.now());
-                new ClienteRepositoryImpl().guardar(cliente);
+                cliente.insertarBD();
 
                 // 2) Mascota: existente o nueva
                 Mascotas mascota;
@@ -338,7 +331,7 @@ public class NuevaCitaAdminDialog extends JDialog {
                     if (especie == null) throw new Exception("No hay especies registradas. Registra una especie primero.");
 
                     // Verificar duplicados
-                    List<Mascotas> todasMascotas = new MascotaRepositoryImpl().buscarTodos();
+                    List<Mascotas> todasMascotas = Mascotas.consultarTodosBD();
                     boolean hayConflicto = todasMascotas.stream().anyMatch(m ->
                             m.getNombre().equalsIgnoreCase(nmMascota) &&
                                     m.getEspecie() != null &&
@@ -376,7 +369,7 @@ public class NuevaCitaAdminDialog extends JDialog {
                     mascota.setCliente(cliente);
                     mascota.setEspecie(especie);
                     mascota.setCaracteristica(car.isEmpty() ? null : car);
-                    new MascotaRepositoryImpl().guardar(mascota);
+                    mascota.insertarBD();
                     nombreMascota = mascota.getEtiqueta();
                 }
 
@@ -388,8 +381,7 @@ public class NuevaCitaAdminDialog extends JDialog {
                     throw new Exception("No hay empleados registrados. Registra un empleado primero.");
 
                 // ── Regla de cupo (mismo criterio que el cliente) ──
-                CitaService citaSvc = new CitaService();
-                long citasActivas = citaSvc.listarTodas().stream()
+                long citasActivas = Citas.consultarTodosBD().stream()
                         .filter(c -> c.getEstadoCita() != EstadoCita.CANCELADA
                                 && c.getEstadoCita() != EstadoCita.COMPLETADA)
                         .count();
@@ -404,7 +396,7 @@ public class NuevaCitaAdminDialog extends JDialog {
                 cita.setEstadoCita(estadoFinal);
                 cita.setMotivo(motivo);
                 if (esDomicilio) cita.setDireccionDomicilio(direccion);
-                citaSvc.guardarCita(cita);
+                cita.insertarBD();
 
                 // Si hay cupo → enviar correo de confirmación al cliente
                 if (hayCupo && cliente.getCorreo() != null && !cliente.getCorreo().isEmpty()) {

@@ -1,64 +1,123 @@
 package org.example.model;
 
-import jakarta.persistence.*;
+import org.example.util.ConexionBD;
+import javax.swing.JOptionPane;
+import java.sql.ResultSet;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
-@Entity
-@Table(name = "CLIENTES")
-public class Cliente extends Persona {
+public class Cliente extends Persona implements Persistible {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
-    // nombre, correo y telefono vienen de Persona
-    // solo mapeamos las columnas específicas de CLIENTES
-
-    @Column(name = "nombre_c", nullable = false, length = 100)
-    private String nombreC;
-
-    @Column(name = "correo_c", length = 100)
-    private String correoC;
-
-    @Column(name = "telefono_c", length = 20)
-    private String telefonoC;
-
-    @Column(name = "direccion_c", length = 150)
-    private String direccion;
-
-    @Column(name = "contrasena", length = 255)
-    private String contrasena;
-
-    @Column(name = "fecha_registro")
+    private Integer   id;
+    private String    direccion;
+    private String    contrasena;
     private LocalDate fechaRegistro;
 
     public Cliente() {}
 
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
+    public Integer   getId()           { return id; }
+    public void      setId(Integer id) { this.id = id; }
 
-    // Sobreescribimos getters/setters para mapear a columnas de BD
-    @Override
-    public String getNombre() { return nombreC; }
-    @Override
-    public void setNombre(String nombre) { this.nombreC = nombre; }
+    public String getDireccion()             { return direccion; }
+    public void   setDireccion(String d)     { this.direccion = d; }
 
-    @Override
-    public String getCorreo() { return correoC; }
-    @Override
-    public void setCorreo(String correo) { this.correoC = correo; }
+    public String getContrasena()            { return contrasena; }
+    public void   setContrasena(String c)    { this.contrasena = c; }
 
-    @Override
-    public String getTelefono() { return telefonoC; }
-    @Override
-    public void setTelefono(String telefono) { this.telefonoC = telefono; }
+    public LocalDate getFechaRegistro()              { return fechaRegistro; }
+    public void      setFechaRegistro(LocalDate f)   { this.fechaRegistro = f; }
 
-    public String getDireccion() { return direccion; }
-    public void setDireccion(String direccion) { this.direccion = direccion; }
+    // ── CRUD ──────────────────────────────────────────────────
 
-    public String getContrasena() { return contrasena; }
-    public void setContrasena(String contrasena) { this.contrasena = contrasena; }
+    public boolean insertarBD() {
+        ConexionBD bd = new ConexionBD();
+        String sql = "INSERT INTO clientes(nombre_c, correo_c, telefono_c, direccion_c, contrasena, fecha_registro) " +
+                "VALUES ('" + esc(getNombre()) + "', '" + esc(getCorreo()) + "', '" + esc(getTelefono()) + "', '" +
+                esc(direccion != null ? direccion : "") + "', '" + esc(contrasena) + "', '" + LocalDate.now() + "')";
+        if (bd.setAutoCommitBD(false)) {
+            if (bd.insertarBD(sql)) { bd.commitBD(); bd.cerrarConexion(); return true; }
+            bd.rollbackBD();
+        }
+        bd.cerrarConexion();
+        return false;
+    }
 
-    public LocalDate getFechaRegistro() { return fechaRegistro; }
-    public void setFechaRegistro(LocalDate fechaRegistro) { this.fechaRegistro = fechaRegistro; }
+    public boolean actualizarBD() {
+        ConexionBD bd = new ConexionBD();
+        String sql = "UPDATE clientes SET nombre_c='" + esc(getNombre()) + "', correo_c='" + esc(getCorreo()) +
+                "', telefono_c='" + esc(getTelefono()) + "', contrasena='" + esc(contrasena) +
+                "' WHERE id=" + id;
+        if (bd.setAutoCommitBD(false)) {
+            if (bd.actualizarBD(sql)) { bd.commitBD(); bd.cerrarConexion(); return true; }
+            bd.rollbackBD();
+        }
+        bd.cerrarConexion();
+        return false;
+    }
+
+    public boolean eliminarBD() {
+        ConexionBD bd = new ConexionBD();
+        String sql = "DELETE FROM clientes WHERE id=" + id;
+        if (bd.setAutoCommitBD(false)) {
+            if (bd.borrarBD(sql)) { bd.commitBD(); bd.cerrarConexion(); return true; }
+            bd.rollbackBD();
+        }
+        bd.cerrarConexion();
+        return false;
+    }
+
+    public static List<Cliente> consultarTodosBD() {
+        List<Cliente> lista = new ArrayList<>();
+        ConexionBD bd = new ConexionBD();
+        try {
+            ResultSet rs = bd.consultarBD("SELECT * FROM clientes");
+            while (rs.next()) lista.add(mapear(rs));
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Error al consultar clientes: " + e.getMessage());
+        }
+        return lista;
+    }
+
+    public static Cliente buscarPorCorreoBD(String correo) {
+        ConexionBD bd = new ConexionBD();
+        try {
+            ResultSet rs = bd.consultarBD(
+                    "SELECT * FROM clientes WHERE LOWER(correo_c) = LOWER('" + esc(correo) + "')");
+            if (rs.next()) return mapear(rs);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Error al buscar cliente: " + e.getMessage());
+        }
+        return null;
+    }
+
+    public static Cliente buscarPorIdBD(int id) {
+        ConexionBD bd = new ConexionBD();
+        try {
+            ResultSet rs = bd.consultarBD("SELECT * FROM clientes WHERE id=" + id);
+            if (rs.next()) return mapear(rs);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Error al buscar cliente: " + e.getMessage());
+        }
+        return null;
+    }
+
+    // ── Internos ──────────────────────────────────────────────
+
+    static Cliente mapear(ResultSet rs) throws Exception {
+        Cliente c = new Cliente();
+        c.setId(rs.getInt("id"));
+        c.setNombre(rs.getString("nombre_c"));
+        c.setCorreo(rs.getString("correo_c"));
+        c.setTelefono(rs.getString("telefono_c"));
+        c.setDireccion(rs.getString("direccion_c"));
+        c.setContrasena(rs.getString("contrasena"));
+        java.sql.Date f = rs.getDate("fecha_registro");
+        if (f != null) c.setFechaRegistro(f.toLocalDate());
+        return c;
+    }
+
+    static String esc(String s) {
+        return s != null ? s.replace("'", "''") : "";
+    }
 }
