@@ -9,7 +9,7 @@ import java.net.URL;
 
 public class SidebarAdmin {
 
-    public static JPanel crear(Color[] C, boolean temaOscuro, String pantallaActual, JPanel panelRef) {
+    public static JPanel crear(Color[] C, String pantallaActual, JPanel panelRef) {
         JPanel sb = new JPanel();
         sb.setLayout(new BoxLayout(sb, BoxLayout.Y_AXIS));
         sb.setBackground(C[1]);

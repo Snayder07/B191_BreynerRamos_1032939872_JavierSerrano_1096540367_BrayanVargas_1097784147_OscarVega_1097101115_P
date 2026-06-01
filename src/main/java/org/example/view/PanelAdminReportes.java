@@ -23,7 +23,6 @@ import java.util.List;
 
 public class PanelAdminReportes {
     public JPanel panel;
-    private boolean temaOscuro = false;
 
     private final CitaAdminController    citaCtrl    = new CitaAdminController();
     private final VacunaAdminController  vacunaCtrl  = new VacunaAdminController();
@@ -38,22 +37,15 @@ public class PanelAdminReportes {
             new Color(234,88,12),new Color(187,224,200),new Color(15,60,30),new Color(134,190,155),
             new Color(220,38,38),new Color(22,163,74),new Color(210,240,220),
     };
-    private final Color[] OSCURO = {
-            new Color(18,24,38),new Color(13,18,30),new Color(26,34,52),new Color(37,55,90),
-            new Color(32,42,64),Color.WHITE,new Color(226,232,240),new Color(148,163,184),
-            new Color(251,146,60),new Color(30,41,59),new Color(9,14,24),new Color(122,175,212),
-            new Color(239,68,68),new Color(34,197,94),new Color(15,23,42),
-    };
     private Color[] C = CLARO;
 
     public PanelAdminReportes() { panel = new JPanel(new BorderLayout()); construir(); }
-    public void setTema(boolean o) { if(o!=temaOscuro){temaOscuro=o;construir();} }
     public void recargar() { construir(); }
 
     private void construir() {
-        panel.removeAll(); C = temaOscuro ? OSCURO : CLARO;
+        panel.removeAll(); C = CLARO;
         panel.setBackground(C[0]);
-        panel.add(SidebarAdmin.crear(C, temaOscuro, "adminReportes", panel), BorderLayout.WEST);
+        panel.add(SidebarAdmin.crear(C, "adminReportes", panel), BorderLayout.WEST);
         panel.add(crearContenido(), BorderLayout.CENTER);
         panel.revalidate(); panel.repaint();
     }
@@ -65,8 +57,10 @@ public class PanelAdminReportes {
         List<Citas>          citas    = citaCtrl.listarTodas();
         List<Control_vacunas> vacunas = vacunaCtrl.listarTodas();
         List<Cliente>         clientes = Cliente.consultarTodosBD();
-        long completadas  = citas.stream().filter(ci -> EstadoCita.COMPLETADA.equals(ci.getEstadoCita())).count();
-        long canceladas   = citas.stream().filter(ci -> EstadoCita.CANCELADA.equals(ci.getEstadoCita())).count();
+        long completadas = 0;
+        for (Citas ci : citas) { if (EstadoCita.COMPLETADA.equals(ci.getEstadoCita())) completadas++; }
+        long canceladas = 0;
+        for (Citas ci : citas) { if (EstadoCita.CANCELADA.equals(ci.getEstadoCita())) canceladas++; }
 
         JPanel c = new JPanel(new BorderLayout()); c.setBackground(C[0]);
 
@@ -282,10 +276,14 @@ public class PanelAdminReportes {
         List<Cliente>         clientes = Cliente.consultarTodosBD();
         List<Mascotas>        mascotas = mascotaCtrl.listarTodas();
         List<Productos>       prods    = invCtrl.listarTodos();
-        long completadas = citas.stream().filter(ci -> EstadoCita.COMPLETADA.equals(ci.getEstadoCita())).count();
-        long canceladas  = citas.stream().filter(ci -> EstadoCita.CANCELADA .equals(ci.getEstadoCita())).count();
-        long vencidas    = vacunas.stream().filter(cv -> "Vencida".equals(cv.getEstado())).count();
-        long stockBajo   = prods.stream().filter(p -> p.getStock() != null && p.getStock() < 10).count();
+        long completadas = 0;
+        for (Citas ci : citas) { if (EstadoCita.COMPLETADA.equals(ci.getEstadoCita())) completadas++; }
+        long canceladas = 0;
+        for (Citas ci : citas) { if (EstadoCita.CANCELADA.equals(ci.getEstadoCita())) canceladas++; }
+        long vencidas = 0;
+        for (Control_vacunas cv : vacunas) { if ("Vencida".equals(cv.getEstado())) vencidas++; }
+        long stockBajo = 0;
+        for (Productos p : prods) { if (p.getStock() != null && p.getStock() < 10) stockBajo++; }
 
         try (PDDocument doc = new PDDocument()) {
             PDPage page = new PDPage(PDRectangle.A4);

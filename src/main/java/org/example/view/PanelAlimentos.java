@@ -7,6 +7,7 @@ import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
+import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
@@ -14,7 +15,6 @@ import java.util.List;
 
 public class PanelAlimentos {
     public JPanel panel;
-    private boolean temaOscuro = false;
 
     private final Color[] CLARO = {
             new Color(240, 246, 252), new Color(26, 74, 122), Color.WHITE,
@@ -23,22 +23,14 @@ public class PanelAlimentos {
             new Color(208, 228, 244), new Color(15, 53, 96),    new Color(122, 175, 212),
             new Color(168, 200, 232), new Color(168, 212, 245),
     };
-    private final Color[] OSCURO = {
-            new Color(18, 24, 38),  new Color(13, 18, 30),  new Color(26, 34, 52),
-            new Color(37, 55, 90),  new Color(32, 42, 64),  Color.WHITE,
-            new Color(226, 232, 240), new Color(100, 116, 139), new Color(251, 146, 60),
-            new Color(30, 41, 59),  new Color(9, 14, 24),   new Color(122, 175, 212),
-            new Color(80, 120, 170), new Color(100, 160, 210),
-    };
     private Color[] C = CLARO;
 
     public PanelAlimentos() { panel = new JPanel(new BorderLayout()); construir(); }
 
-    public void setTema(boolean oscuro) { if (oscuro != temaOscuro) { temaOscuro = oscuro; construir(); } }
     public void recargar() { construir(); }
 
     private void construir() {
-        panel.removeAll(); C = temaOscuro ? OSCURO : CLARO;
+        panel.removeAll(); C = CLARO;
         panel.setBackground(C[0]);
         panel.add(crearSidebar(), BorderLayout.WEST);
         panel.add(crearContenido(), BorderLayout.CENTER);
@@ -95,10 +87,10 @@ public class PanelAlimentos {
             b.setAlignmentX(Component.LEFT_ALIGNMENT);
             b.setMaximumSize(new Dimension(Integer.MAX_VALUE,46));
             b.setHorizontalAlignment(SwingConstants.LEFT);
-            if (i == 0) b.addActionListener(e -> Main.cambiarPantalla("panelCliente"));
-            if (i == 1) b.addActionListener(e -> Main.cambiarPantalla("misMascotas"));
-            if (i == 2) b.addActionListener(e -> Main.cambiarPantalla("misCitas"));
-            if (i == 3) b.addActionListener(e -> Main.cambiarPantalla("historial"));
+            if (i == 0) b.addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { Main.cambiarPantalla("panelCliente"); } });
+            if (i == 1) b.addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { Main.cambiarPantalla("misMascotas"); } });
+            if (i == 2) b.addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { Main.cambiarPantalla("misCitas"); } });
+            if (i == 3) b.addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { Main.cambiarPantalla("historial"); } });
             sb.add(b); sb.add(Box.createVerticalStrut(3));
         }
         sb.add(Box.createVerticalStrut(12));
@@ -110,7 +102,7 @@ public class PanelAlimentos {
             b.setAlignmentX(Component.LEFT_ALIGNMENT);
             b.setMaximumSize(new Dimension(Integer.MAX_VALUE,46));
             b.setHorizontalAlignment(SwingConstants.LEFT);
-            if (i == 1) b.addActionListener(e -> Main.cambiarPantalla("vacunas"));
+            if (i == 1) b.addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { Main.cambiarPantalla("vacunas"); } });
             sb.add(b); sb.add(Box.createVerticalStrut(3));
         }
         sb.add(Box.createVerticalGlue());
@@ -118,11 +110,14 @@ public class PanelAlimentos {
         JButton cerrar = btn("Cerrar sesion", C[1], C[12], true);
         cerrar.setAlignmentX(Component.LEFT_ALIGNMENT);
         cerrar.setMaximumSize(new Dimension(Integer.MAX_VALUE,36));
-        cerrar.addActionListener(e -> {
-            if (JOptionPane.showConfirmDialog(panel,"Deseas cerrar sesion?","Cerrar sesion",
-                    JOptionPane.YES_NO_OPTION)==JOptionPane.YES_OPTION) {
-                Main.frame.setSize(420,520); Main.frame.setLocationRelativeTo(null);
-                Main.cambiarPantalla("login");
+        cerrar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (JOptionPane.showConfirmDialog(panel,"Deseas cerrar sesion?","Cerrar sesion",
+                        JOptionPane.YES_NO_OPTION)==JOptionPane.YES_OPTION) {
+                    Main.frame.setSize(420,520); Main.frame.setLocationRelativeTo(null);
+                    Main.cambiarPantalla("login");
+                }
             }
         });
         sb.add(cerrar); sb.add(Box.createVerticalStrut(8));

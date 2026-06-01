@@ -13,7 +13,6 @@ import java.util.List;
 
 public class PanelMisCitas {
     public JPanel panel;
-    private boolean temaOscuro = false;
     private String filtroEstado = null;
 
     private final CitaAdminController ctrl = new CitaAdminController();
@@ -25,13 +24,6 @@ public class PanelMisCitas {
             new Color(208, 228, 244), new Color(15,  53,   96), new Color(122, 175, 212),
             new Color(168, 200, 232), new Color(168, 212, 245),
     };
-    private final Color[] OSCURO = {
-            new Color(18,  24,  38),  new Color(13,  18,  30),  new Color(26,  34,  52),
-            new Color(37,  55,  90),  new Color(32,  42,  64),  Color.WHITE,
-            new Color(226, 232, 240), new Color(100, 116, 139), new Color(251, 146,  60),
-            new Color(30,  41,  59),  new Color(9,   14,  24),  new Color(122, 175, 212),
-            new Color(80,  120, 170), new Color(100, 160, 210),
-    };
     private Color[] C = CLARO;
 
     public PanelMisCitas() {
@@ -39,15 +31,11 @@ public class PanelMisCitas {
         construir();
     }
 
-    public void setTema(boolean oscuro) {
-        if (oscuro != temaOscuro) { temaOscuro = oscuro; construir(); }
-    }
-
     public void recargar() { construir(); }
 
     private void construir() {
         panel.removeAll();
-        C = temaOscuro ? OSCURO : CLARO;
+        C = CLARO;
         panel.setBackground(C[0]);
         panel.add(crearSidebar(),   BorderLayout.WEST);
         panel.add(crearContenido(), BorderLayout.CENTER);
@@ -289,7 +277,7 @@ public class PanelMisCitas {
                 JButton btnCancelar = new JButton("Cancelar");
                 btnCancelar.setFont(new Font("Arial", Font.PLAIN, 11));
                 btnCancelar.setBackground(C[2]);
-                btnCancelar.setForeground(temaOscuro ? new Color(80, 110, 150) : new Color(176, 200, 224));
+                btnCancelar.setForeground(new Color(176, 200, 224));
                 btnCancelar.setBorderPainted(false); btnCancelar.setFocusPainted(false);
                 btnCancelar.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
                 btnCancelar.addActionListener(new ActionListener() {

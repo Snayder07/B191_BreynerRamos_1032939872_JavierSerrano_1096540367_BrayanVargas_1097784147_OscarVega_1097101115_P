@@ -12,7 +12,6 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Dialog para que el admin registre una cita manualmente,
@@ -53,111 +52,77 @@ public class NuevaCitaAdminDialog extends JDialog {
         root.add(titulo);
 
         root.add(Box.createVerticalStrut(4));
-        JLabel sub = new JLabel("<html><font color='#64748b'>Completa los datos del dueno y la mascota.</font></html>");
+        JLabel sub = new JLabel("<html><font color='#64748b'>Selecciona el cliente y su mascota para agendar la cita.</font></html>");
         sub.setFont(new Font("Arial", Font.PLAIN, 12));
         sub.setAlignmentX(LEFT_ALIGNMENT);
         root.add(sub);
         root.add(Box.createVerticalStrut(20));
 
-        // ── Seccion: Datos del dueno ──────────────────────
-        root.add(seccion("Datos del dueno"));
+        // ── Seccion: Cliente y mascota ────────────────────
+        root.add(seccion("Cliente y mascota"));
         root.add(Box.createVerticalStrut(8));
 
-        JTextField tfNombreDueno = campo("");
-        JTextField tfCelular     = campo("");
-        JTextField tfCorreo      = campo("");
-
-        root.add(fila("Nombre del dueno *", tfNombreDueno));
+        // Combo de clientes
+        List<Cliente> clientesList = Cliente.consultarTodosBD();
+        JComboBox<Object> cbCliente = new JComboBox<>();
+        cbCliente.addItem("-- Selecciona un cliente --");
+        for (Cliente cl : clientesList) cbCliente.addItem(cl);
+        cbCliente.setFont(new Font("Arial", Font.PLAIN, 13));
+        cbCliente.setBackground(Color.WHITE);
+        cbCliente.setAlignmentX(LEFT_ALIGNMENT);
+        cbCliente.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        cbCliente.setRenderer(new DefaultListCellRenderer() {
+            public Component getListCellRendererComponent(JList<?> l, Object v, int i, boolean s, boolean f) {
+                super.getListCellRendererComponent(l, v, i, s, f);
+                if (v instanceof Cliente) setText(((Cliente)v).getNombre());
+                return this;
+            }
+        });
+        root.add(filaCombo("Cliente *", cbCliente));
         root.add(Box.createVerticalStrut(8));
-        root.add(fila("Celular", tfCelular));
-        root.add(Box.createVerticalStrut(8));
-        root.add(fila("Correo (opcional)", tfCorreo));
-        root.add(Box.createVerticalStrut(18));
 
-        // ── Seccion: Datos de la mascota ──────────────────
-        root.add(seccion("Datos de la mascota"));
-        root.add(Box.createVerticalStrut(8));
-
-        // Combo: elegir mascota existente
-        List<Mascotas> mascotasList = Mascotas.consultarTodosBD();
+        // Combo de mascotas filtrado por cliente (recarga desde BD cada vez)
         JComboBox<Object> cbMascota = new JComboBox<>();
-        cbMascota.addItem("-- Nueva mascota (no registrada) --");
-        for (Mascotas m : mascotasList) cbMascota.addItem(m);
+        cbMascota.addItem("-- Selecciona primero un cliente --");
+        cbMascota.setEnabled(false);
         cbMascota.setFont(new Font("Arial", Font.PLAIN, 13));
         cbMascota.setBackground(Color.WHITE);
         cbMascota.setAlignmentX(LEFT_ALIGNMENT);
         cbMascota.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
-        cbMascota.setRenderer(new DefaultListCellRenderer(){
-            public Component getListCellRendererComponent(JList<?> l,Object v,int i,boolean s,boolean f){
-                super.getListCellRendererComponent(l,v,i,s,f);
+        cbMascota.setRenderer(new DefaultListCellRenderer() {
+            public Component getListCellRendererComponent(JList<?> l, Object v, int i, boolean s, boolean f) {
+                super.getListCellRendererComponent(l, v, i, s, f);
                 if (v instanceof Mascotas) setText(((Mascotas)v).getEtiqueta());
                 return this;
             }
         });
-        root.add(filaCombo("Seleccionar mascota registrada", cbMascota));
-        root.add(Box.createVerticalStrut(6));
-
-        JLabel lblOSep = new JLabel("— o ingresa datos de mascota nueva —");
-        lblOSep.setFont(new Font("Arial", Font.ITALIC, 11));
-        lblOSep.setForeground(GRIS);
-        lblOSep.setAlignmentX(LEFT_ALIGNMENT);
-        root.add(lblOSep);
-        root.add(Box.createVerticalStrut(6));
-
-        JTextField tfNombreMascota = campo("");
-
-        // Cargar especies desde BD
-        List<Especies> especiesList = Especies.consultarTodosBD();
-        String[] nombresEspecies = especiesList.stream()
-                .map(Especies::getNombre)
-                .toArray(String[]::new);
-        if (nombresEspecies.length == 0) nombresEspecies = new String[]{"Perro", "Gato", "Otro"};
-
-        JComboBox<String> cbEspecie = new JComboBox<>(nombresEspecies);
-        cbEspecie.setFont(new Font("Arial", Font.PLAIN, 13));
-        cbEspecie.setBackground(Color.WHITE);
-        cbEspecie.setAlignmentX(LEFT_ALIGNMENT);
-        cbEspecie.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
-
-        JTextField tfCaracteristica = campo("");
-        tfCaracteristica.setToolTipText("Solo requerida si ya existe otra mascota con el mismo nombre y especie");
-        // Mensaje de error inline para duplicados
-        JLabel lblCarError = new JLabel("");
-        lblCarError.setFont(new Font("Arial", Font.BOLD, 11));
-        lblCarError.setForeground(new Color(220, 38, 38));
-        lblCarError.setAlignmentX(LEFT_ALIGNMENT);
-        lblCarError.setVisible(false);
-        // Limpiar error al escribir
-        tfCaracteristica.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            void limpiar() {
-                tfCaracteristica.setBorder(BorderFactory.createLineBorder(BORDE, 1));
-                lblCarError.setVisible(false);
-            }
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { limpiar(); }
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { limpiar(); }
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { limpiar(); }
-        });
-
-        // Panel de nueva mascota (se oculta si elige una existente)
-        JPanel panelNueva = new JPanel();
-        panelNueva.setLayout(new BoxLayout(panelNueva, BoxLayout.Y_AXIS));
-        panelNueva.setBackground(VERDE_LT);
-        panelNueva.setAlignmentX(LEFT_ALIGNMENT);
-        panelNueva.add(fila("Nombre de la mascota *", tfNombreMascota));
-        panelNueva.add(Box.createVerticalStrut(8));
-        panelNueva.add(filaCombo("Especie *", cbEspecie));
-        panelNueva.add(Box.createVerticalStrut(8));
-        panelNueva.add(fila("Característica diferenciadora (si hay duplicado)", tfCaracteristica));
-        panelNueva.add(lblCarError);
-        root.add(panelNueva);
-
-        // Mostrar/ocultar panel de nueva mascota según selección del combo
-        cbMascota.addActionListener(ev -> {
-            boolean esNueva = !(cbMascota.getSelectedItem() instanceof Mascotas);
-            panelNueva.setVisible(esNueva);
-        });
-
+        root.add(filaCombo("Mascota *", cbMascota));
         root.add(Box.createVerticalStrut(18));
+
+        // Filtrar mascotas consultando BD cada vez que cambia el cliente
+        cbCliente.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent ev) {
+                cbMascota.removeAllItems();
+                Object sel = cbCliente.getSelectedItem();
+                if (sel instanceof Cliente) {
+                    Cliente cl = (Cliente) sel;
+                    List<Mascotas> frescas = Mascotas.consultarTodosBD();
+                    boolean hayMascotas = false;
+                    for (Mascotas m : frescas) {
+                        if (m.getCliente() != null && m.getCliente().getId().equals(cl.getId())) {
+                            cbMascota.addItem(m);
+                            hayMascotas = true;
+                        }
+                    }
+                    if (!hayMascotas) cbMascota.addItem("-- Este cliente no tiene mascotas registradas --");
+                    cbMascota.setEnabled(hayMascotas);
+                } else {
+                    cbMascota.addItem("-- Selecciona primero un cliente --");
+                    cbMascota.setEnabled(false);
+                }
+            }
+        });
 
         // ── Seccion: Datos de la cita ─────────────────────
         root.add(seccion("Datos de la cita"));
@@ -199,6 +164,22 @@ public class NuevaCitaAdminDialog extends JDialog {
         dateChooser.setMinSelectableDate(new Date());
         dateChooser.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
         dateChooser.setAlignmentX(LEFT_ALIGNMENT);
+        dateChooser.addPropertyChangeListener("date", new java.beans.PropertyChangeListener() {
+            @Override
+            public void propertyChange(java.beans.PropertyChangeEvent evt) {
+                Date sel = dateChooser.getDate();
+                if (sel != null) {
+                    java.util.Calendar cal = java.util.Calendar.getInstance();
+                    cal.setTime(sel);
+                    if (cal.get(java.util.Calendar.DAY_OF_WEEK) == java.util.Calendar.SUNDAY) {
+                        JOptionPane.showMessageDialog(NuevaCitaAdminDialog.this,
+                                "Los domingos no están disponibles para citas.\nSelecciona un día de lunes a sábado.",
+                                "Día no disponible", JOptionPane.WARNING_MESSAGE);
+                        dateChooser.setDate(null);
+                    }
+                }
+            }
+        });
         colFecha.add(dateChooser);
 
         // Hora con JComboBox (igual que el panel de cliente)
@@ -207,17 +188,17 @@ public class NuevaCitaAdminDialog extends JDialog {
         colHora.setBackground(VERDE_LT);
         colHora.add(label("Hora *"));
         colHora.add(Box.createVerticalStrut(3));
-        String[] horas = {
-                "Selecciona hora...",
-                "08:00","08:30","09:00","09:30",
-                "10:00","10:30","11:00","11:30",
-                "14:00","14:30","15:00","15:30",
-                "16:00","16:30"
-        };
-        JComboBox<String> cbHora = new JComboBox<>(horas);
+        java.util.List<String> listaHoras = new java.util.ArrayList<>();
+        listaHoras.add("Selecciona hora...");
+        for (int h = 7; h < 20; h++) {
+            for (int m = 0; m < 60; m += 30) {
+                listaHoras.add(String.format("%02d:%02d", h, m));
+            }
+        }
+        JComboBox<String> cbHora = new JComboBox<>(listaHoras.toArray(new String[0]));
         cbHora.setFont(new Font("Arial", Font.PLAIN, 13));
         cbHora.setBackground(Color.WHITE);
-        cbHora.setSelectedIndex(3); // 09:00 por defecto
+        cbHora.setSelectedItem("09:00");
         cbHora.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
         cbHora.setAlignmentX(LEFT_ALIGNMENT);
         colHora.add(cbHora);
@@ -255,14 +236,20 @@ public class NuevaCitaAdminDialog extends JDialog {
         tfDireccion.setBackground(new Color(220, 220, 220));
         root.add(fila("Direccion (si es domicilio)", tfDireccion));
 
-        rbDomicilio.addActionListener(e -> {
-            tfDireccion.setEnabled(true);
-            tfDireccion.setBackground(Color.WHITE);
+        rbDomicilio.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                tfDireccion.setEnabled(true);
+                tfDireccion.setBackground(Color.WHITE);
+            }
         });
-        rbPresencial.addActionListener(e -> {
-            tfDireccion.setEnabled(false);
-            tfDireccion.setBackground(new Color(220, 220, 220));
-            tfDireccion.setText("");
+        rbPresencial.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                tfDireccion.setEnabled(false);
+                tfDireccion.setBackground(new Color(220, 220, 220));
+                tfDireccion.setText("");
+            }
         });
 
         root.add(Box.createVerticalStrut(24));
@@ -280,25 +267,38 @@ public class NuevaCitaAdminDialog extends JDialog {
         root.add(botones);
 
         // ── Logica ────────────────────────────────────────
-        btnCancelar.addActionListener(e -> dispose());
+        btnCancelar.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                NuevaCitaAdminDialog.this.dispose();
+            }
+        });
 
         // Cargar empleados para asignar (se usa el admin logueado o el primero disponible)
         List<Empleados> empleadosList = Empleados.consultarTodosBD();
 
-        btnGuardar.addActionListener(e -> {
+        btnGuardar.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
             try {
-                String nombreDueno   = tfNombreDueno.getText().trim();
-                String celular       = tfCelular.getText().trim();
-                String correo        = tfCorreo.getText().trim();
-                String horaStr       = (String) cbHora.getSelectedItem();
-                boolean esDomicilio  = rbDomicilio.isSelected();
-                String direccion     = tfDireccion.getText().trim();
+                // Validar cliente y mascota seleccionados
+                if (!(cbCliente.getSelectedItem() instanceof Cliente))
+                    throw new Exception("Selecciona un cliente.");
+                if (!(cbMascota.getSelectedItem() instanceof Mascotas))
+                    throw new Exception("Selecciona una mascota del cliente.");
+
+                Cliente cliente      = (Cliente) cbCliente.getSelectedItem();
+                Mascotas mascota     = (Mascotas) cbMascota.getSelectedItem();
+                String nombreMascota = mascota.getEtiqueta();
+
+                String horaStr      = (String) cbHora.getSelectedItem();
+                boolean esDomicilio = rbDomicilio.isSelected();
+                String direccion    = tfDireccion.getText().trim();
                 Servicio servicioSel = (cbMotivo.getSelectedItem() instanceof Servicio)
                         ? (Servicio) cbMotivo.getSelectedItem() : null;
                 String motivo = servicioSel != null ? servicioSel.getNombre() : null;
 
-                if (nombreDueno.isEmpty()) throw new Exception("El nombre del dueno es obligatorio.");
-                if (motivo == null)        throw new Exception("Selecciona el servicio / motivo de la cita.");
+                if (motivo == null)   throw new Exception("Selecciona el servicio / motivo de la cita.");
                 if (dateChooser.getDate() == null) throw new Exception("Selecciona la fecha de la cita.");
                 if (horaStr == null || horaStr.startsWith("Selecciona")) throw new Exception("Selecciona la hora de la cita.");
                 if (esDomicilio && direccion.isEmpty()) throw new Exception("Ingresa la direccion del domicilio.");
@@ -307,84 +307,18 @@ public class NuevaCitaAdminDialog extends JDialog {
                         .atZone(ZoneId.systemDefault()).toLocalDate();
                 LocalTime hora  = LocalTime.parse(horaStr);
 
-                // 1) Crear cliente
-                Cliente cliente = new Cliente();
-                cliente.setNombre(nombreDueno);
-                cliente.setTelefono(celular.isEmpty() ? null : celular);
-                cliente.setCorreo(correo.isEmpty() ? null : correo.toLowerCase());
-                cliente.setContrasena("kamp" + UUID.randomUUID().toString().substring(0, 6));
-                cliente.setFechaRegistro(LocalDate.now());
-                cliente.insertarBD();
-
-                // 2) Mascota: existente o nueva
-                Mascotas mascota;
-                String nombreMascota;
-                if (cbMascota.getSelectedItem() instanceof Mascotas) {
-                    mascota = (Mascotas) cbMascota.getSelectedItem();
-                    nombreMascota = mascota.getEtiqueta();
-                } else {
-                    String nmMascota = tfNombreMascota.getText().trim();
-                    if (nmMascota.isEmpty()) throw new Exception("El nombre de la mascota es obligatorio.");
-                    int especieIdx = cbEspecie.getSelectedIndex();
-                    Especies especie = (especieIdx >= 0 && especieIdx < especiesList.size())
-                            ? especiesList.get(especieIdx) : null;
-                    if (especie == null) throw new Exception("No hay especies registradas. Registra una especie primero.");
-
-                    // Verificar duplicados
-                    List<Mascotas> todasMascotas = Mascotas.consultarTodosBD();
-                    boolean hayConflicto = todasMascotas.stream().anyMatch(m ->
-                            m.getNombre().equalsIgnoreCase(nmMascota) &&
-                                    m.getEspecie() != null &&
-                                    m.getEspecie().getNombre().equalsIgnoreCase(especie.getNombre()));
-                    String car = tfCaracteristica.getText().trim();
-                    if (hayConflicto) {
-                        if (car.isEmpty()) {
-                            // Resaltar campo en rojo y enfocar
-                            tfCaracteristica.setBorder(BorderFactory.createLineBorder(new Color(220,38,38), 2));
-                            lblCarError.setText("⚠ Obligatorio: ya existe \"" + nmMascota + "\" de especie " + especie.getNombre());
-                            lblCarError.setVisible(true);
-                            tfCaracteristica.requestFocusInWindow();
-                            pack();
-                            throw new Exception(
-                                    "Ya existe una mascota llamada \"" + nmMascota + "\" de especie " + especie.getNombre() + ".\n" +
-                                            "Ingresa una característica diferenciadora (ej: collar rojo, pelaje negro).");
-                        }
-                        boolean carDup = todasMascotas.stream().anyMatch(m ->
-                                m.getNombre().equalsIgnoreCase(nmMascota) &&
-                                        m.getEspecie() != null &&
-                                        m.getEspecie().getNombre().equalsIgnoreCase(especie.getNombre()) &&
-                                        car.equalsIgnoreCase(m.getCaracteristica() != null ? m.getCaracteristica().trim() : ""));
-                        if (carDup) {
-                            tfCaracteristica.setBorder(BorderFactory.createLineBorder(new Color(220,38,38), 2));
-                            lblCarError.setText("⚠ Esa característica ya existe, usa otra diferente");
-                            lblCarError.setVisible(true);
-                            tfCaracteristica.requestFocusInWindow();
-                            pack();
-                            throw new Exception("Ya existe una mascota con ese nombre, especie y característica. Elige otra diferenciadora.");
-                        }
-                    }
-
-                    mascota = new Mascotas();
-                    mascota.setNombre(nmMascota);
-                    mascota.setCliente(cliente);
-                    mascota.setEspecie(especie);
-                    mascota.setCaracteristica(car.isEmpty() ? null : car);
-                    mascota.insertarBD();
-                    nombreMascota = mascota.getEtiqueta();
-                }
-
-                // 3) Crear cita — veterinario = admin logueado o primero disponible
+                // Crear cita — veterinario = admin logueado o primero disponible
                 Empleados empleado = Main.empleadoActual;
                 if (empleado == null && !empleadosList.isEmpty())
                     empleado = empleadosList.get(0);
                 if (empleado == null)
                     throw new Exception("No hay empleados registrados. Registra un empleado primero.");
 
-                // ── Regla de cupo (mismo criterio que el cliente) ──
-                long citasActivas = Citas.consultarTodosBD().stream()
-                        .filter(c -> c.getEstadoCita() != EstadoCita.CANCELADA
-                                && c.getEstadoCita() != EstadoCita.COMPLETADA)
-                        .count();
+                long citasActivas = 0;
+                for (Citas c : Citas.consultarTodosBD()) {
+                    if (c.getEstadoCita() != EstadoCita.CANCELADA
+                            && c.getEstadoCita() != EstadoCita.COMPLETADA) citasActivas++;
+                }
                 boolean hayCupo = citasActivas < 10;
                 EstadoCita estadoFinal = hayCupo ? EstadoCita.CONFIRMADA : EstadoCita.PENDIENTE;
 
@@ -398,47 +332,50 @@ public class NuevaCitaAdminDialog extends JDialog {
                 if (esDomicilio) cita.setDireccionDomicilio(direccion);
                 cita.insertarBD();
 
-                // Si hay cupo → enviar correo de confirmación al cliente
+                // Correo si hay cupo y el cliente tiene correo
                 if (hayCupo && cliente.getCorreo() != null && !cliente.getCorreo().isEmpty()) {
                     String cuerpoCorreo =
                             "<div style='font-family:Arial,sans-serif;max-width:520px;margin:auto;background:#f0fdf4;border-radius:10px;padding:32px;'>" +
-                                    "<h2 style='color:#16a34a;'>✅ Cita Confirmada</h2>" +
-                                    "<p>Hola <b>" + cliente.getNombre() + "</b>, tu cita en <b>Kampets Veterinaria</b> fue confirmada.</p>" +
-                                    "<table style='width:100%;border-collapse:collapse;margin:16px 0;'>" +
-                                    "<tr><td style='padding:8px 12px;background:#dcfce7;color:#15803d;font-weight:bold;'>Mascota</td><td style='padding:8px 12px;'>" + nombreMascota + "</td></tr>" +
-                                    "<tr><td style='padding:8px 12px;background:#dcfce7;color:#15803d;font-weight:bold;'>Fecha</td><td style='padding:8px 12px;'>" + fecha + "</td></tr>" +
-                                    "<tr><td style='padding:8px 12px;background:#dcfce7;color:#15803d;font-weight:bold;'>Hora</td><td style='padding:8px 12px;'>" + hora + "</td></tr>" +
-                                    "</table>" +
-                                    "<p style='color:#6b7280;font-size:13px;'>Por favor preséntate puntualmente. 🐾</p></div>";
-                    final String correoFinal = cliente.getCorreo();
-                    final String nombreFinal = cliente.getNombre();
-                    final String cuerpoFinal = cuerpoCorreo;
-                    new Thread(() -> {
-                        try {
-                            CorreoService.enviarCorreoGeneral(correoFinal, nombreFinal, "Confirmación de cita - Kampets", cuerpoFinal);
-                        } catch (Exception mailEx) {
-                            System.err.println("[CORREO ERROR] " + mailEx.getMessage());
-                            SwingUtilities.invokeLater(() ->
-                                    JOptionPane.showMessageDialog(null,
-                                            "Cita guardada, pero el correo no se pudo enviar:\n" + mailEx.getMessage(),
-                                            "Aviso de correo", JOptionPane.WARNING_MESSAGE));
+                            "<h2 style='color:#16a34a;'>Cita Confirmada</h2>" +
+                            "<p>Hola <b>" + cliente.getNombre() + "</b>, tu cita en <b>Kampets Veterinaria</b> fue confirmada.</p>" +
+                            "<table style='width:100%;border-collapse:collapse;margin:16px 0;'>" +
+                            "<tr><td style='padding:8px 12px;background:#dcfce7;font-weight:bold;'>Mascota</td><td style='padding:8px 12px;'>" + nombreMascota + "</td></tr>" +
+                            "<tr><td style='padding:8px 12px;background:#dcfce7;font-weight:bold;'>Fecha</td><td style='padding:8px 12px;'>" + fecha + "</td></tr>" +
+                            "<tr><td style='padding:8px 12px;background:#dcfce7;font-weight:bold;'>Hora</td><td style='padding:8px 12px;'>" + hora + "</td></tr>" +
+                            "</table></div>";
+                    final String cf = cliente.getCorreo(), nf = cliente.getNombre(), bf = cuerpoCorreo;
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                CorreoService.enviarCorreoGeneral(cf, nf, "Confirmacion de cita - Kampets", bf);
+                            } catch (Exception mailEx) {
+                                SwingUtilities.invokeLater(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        JOptionPane.showMessageDialog(null,
+                                                "Cita guardada, pero el correo no se pudo enviar:\n" + mailEx.getMessage(),
+                                                "Aviso de correo", JOptionPane.WARNING_MESSAGE);
+                                    }
+                                });
+                            }
                         }
                     }).start();
                 }
 
                 guardado = true;
-                String estadoMsg = hayCupo ? "Confirmada" : "En lista de espera (sin cupo disponible)";
-                JOptionPane.showMessageDialog(this,
-                        "Cita registrada.\n" +
-                                "Dueño:  " + nombreDueno + "\n" +
-                                "Mascota: " + nombreMascota + "\n" +
-                                "Fecha:   " + fecha + "  Hora: " + hora + "\n" +
-                                "Estado:  " + estadoMsg,
+                String estadoMsg = hayCupo ? "Confirmada" : "En lista de espera (sin cupo)";
+                JOptionPane.showMessageDialog(NuevaCitaAdminDialog.this,
+                        "Cita registrada.\nCliente: " + cliente.getNombre() +
+                        "\nMascota: " + nombreMascota +
+                        "\nFecha:   " + fecha + "  Hora: " + hora +
+                        "\nEstado:  " + estadoMsg,
                         "Listo", JOptionPane.INFORMATION_MESSAGE);
-                dispose();
+                NuevaCitaAdminDialog.this.dispose();
 
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(NuevaCitaAdminDialog.this, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
             }
         });
 

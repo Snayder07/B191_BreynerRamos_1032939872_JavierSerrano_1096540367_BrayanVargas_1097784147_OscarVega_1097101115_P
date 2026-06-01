@@ -17,7 +17,6 @@ import javax.imageio.ImageIO;
 
 public class PanelAdminInventario {
     public JPanel panel;
-    private boolean temaOscuro = false;
 
     private final InventarioController ctrl = new InventarioController();
 
@@ -27,22 +26,15 @@ public class PanelAdminInventario {
             new Color(234,88,12),new Color(187,224,200),new Color(15,60,30),new Color(134,190,155),
             new Color(220,38,38),new Color(22,163,74),new Color(210,240,220),
     };
-    private final Color[] OSCURO = {
-            new Color(18,24,38),new Color(13,18,30),new Color(26,34,52),new Color(37,55,90),
-            new Color(32,42,64),Color.WHITE,new Color(226,232,240),new Color(148,163,184),
-            new Color(251,146,60),new Color(30,41,59),new Color(9,14,24),new Color(122,175,212),
-            new Color(239,68,68),new Color(34,197,94),new Color(15,23,42),
-    };
     private Color[] C = CLARO;
 
     public PanelAdminInventario() { panel = new JPanel(new BorderLayout()); construir(); }
-    public void setTema(boolean o) { if(o!=temaOscuro){temaOscuro=o;construir();} }
     public void recargar() { construir(); }
 
     private void construir() {
-        panel.removeAll(); C = temaOscuro ? OSCURO : CLARO;
+        panel.removeAll(); C = CLARO;
         panel.setBackground(C[0]);
-        panel.add(SidebarAdmin.crear(C, temaOscuro, "adminInventario", panel), BorderLayout.WEST);
+        panel.add(SidebarAdmin.crear(C, "adminInventario", panel), BorderLayout.WEST);
         panel.add(crearContenido(), BorderLayout.CENTER);
         panel.revalidate(); panel.repaint();
     }
@@ -52,9 +44,13 @@ public class PanelAdminInventario {
     private JPanel crearContenido() {
         List<Productos> lista = ctrl.listarTodos();
         long total     = lista.size();
-        long stockBajo = lista.stream().filter(p -> p.getStock() != null && p.getStock() < 10).count();
-        long tipos     = lista.stream().map(Productos::getTipo).filter(Objects::nonNull).distinct().count();
-        long sinStock  = lista.stream().filter(p -> p.getStock() != null && p.getStock() == 0).count();
+        long stockBajo = 0;
+        for (Productos p : lista) { if (p.getStock() != null && p.getStock() < 10) stockBajo++; }
+        java.util.Set<String> tiposSet = new java.util.HashSet<>();
+        for (Productos p : lista) { if (p.getTipo() != null) tiposSet.add(p.getTipo()); }
+        long tipos = tiposSet.size();
+        long sinStock = 0;
+        for (Productos p : lista) { if (p.getStock() != null && p.getStock() == 0) sinStock++; }
 
         JPanel c = new JPanel(new BorderLayout()); c.setBackground(C[0]);
 
@@ -73,7 +69,10 @@ public class PanelAdminInventario {
         btnAgregar.setOpaque(true); btnAgregar.setBorderPainted(false);
         btnAgregar.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
         btnAgregar.setBorder(BorderFactory.createEmptyBorder(9,18,9,18));
-        btnAgregar.addActionListener(e -> mostrarFormAgregar());
+        btnAgregar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { mostrarFormAgregar(); }
+        });
         tr.add(btnAgregar);
         tb.add(tl,BorderLayout.WEST); tb.add(tr,BorderLayout.EAST);
         c.add(tb,BorderLayout.NORTH);
@@ -149,37 +148,43 @@ public class PanelAdminInventario {
             tabla.getColumnModel().getColumn(i).setPreferredWidth(anchos[i]);
 
         // ── Renderer foto ────────────────────────────────────
-        tabla.getColumnModel().getColumn(0).setCellRenderer((t, val, sel, foc, row, col) -> {
-            JLabel lbl = new JLabel();
-            lbl.setHorizontalAlignment(SwingConstants.CENTER);
-            lbl.setOpaque(true);
-            lbl.setBackground(sel ? C[4] : C[2]);
-            byte[] bytes = (byte[]) val;
-            if (bytes != null && bytes.length > 0) {
-                try {
-                    BufferedImage img = ImageIO.read(new ByteArrayInputStream(bytes));
-                    if (img != null)
-                        lbl.setIcon(new ImageIcon(img.getScaledInstance(44, 44, Image.SCALE_SMOOTH)));
-                } catch (Exception ignored) {}
+        tabla.getColumnModel().getColumn(0).setCellRenderer(new javax.swing.table.TableCellRenderer() {
+            @Override
+            public java.awt.Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean foc, int row, int col) {
+                JLabel lbl = new JLabel();
+                lbl.setHorizontalAlignment(SwingConstants.CENTER);
+                lbl.setOpaque(true);
+                lbl.setBackground(sel ? C[4] : C[2]);
+                byte[] bytes = (byte[]) val;
+                if (bytes != null && bytes.length > 0) {
+                    try {
+                        BufferedImage img = ImageIO.read(new ByteArrayInputStream(bytes));
+                        if (img != null)
+                            lbl.setIcon(new ImageIcon(img.getScaledInstance(44, 44, Image.SCALE_SMOOTH)));
+                    } catch (Exception ignored) {}
+                }
+                if (lbl.getIcon() == null) {
+                    lbl.setText("📦");
+                    lbl.setFont(new Font("Arial", Font.PLAIN, 22));
+                }
+                return lbl;
             }
-            if (lbl.getIcon() == null) {
-                lbl.setText("📦");
-                lbl.setFont(new Font("Arial", Font.PLAIN, 22));
-            }
-            return lbl;
         });
 
         // ── Renderer stock (color según cantidad) ─────────────
-        tabla.getColumnModel().getColumn(5).setCellRenderer((t, val, sel, foc, row, col) -> {
-            int stock = val instanceof Integer ? (Integer) val : 0;
-            JLabel lbl = new JLabel(String.valueOf(stock), SwingConstants.CENTER);
-            lbl.setFont(new Font("Arial", Font.BOLD, 13));
-            lbl.setOpaque(true);
-            lbl.setBackground(sel ? C[4] : C[2]);
-            if      (stock == 0)  lbl.setForeground(new Color(220, 38, 38));
-            else if (stock < 10)  lbl.setForeground(new Color(234, 88, 12));
-            else                  lbl.setForeground(new Color(22, 163, 74));
-            return lbl;
+        tabla.getColumnModel().getColumn(5).setCellRenderer(new javax.swing.table.TableCellRenderer() {
+            @Override
+            public java.awt.Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean foc, int row, int col) {
+                int stock = val instanceof Integer ? (Integer) val : 0;
+                JLabel lbl = new JLabel(String.valueOf(stock), SwingConstants.CENTER);
+                lbl.setFont(new Font("Arial", Font.BOLD, 13));
+                lbl.setOpaque(true);
+                lbl.setBackground(sel ? C[4] : C[2]);
+                if      (stock == 0)  lbl.setForeground(new Color(220, 38, 38));
+                else if (stock < 10)  lbl.setForeground(new Color(234, 88, 12));
+                else                  lbl.setForeground(new Color(22, 163, 74));
+                return lbl;
+            }
         });
 
         // ── Renderer acciones ─────────────────────────────────
@@ -225,19 +230,25 @@ public class PanelAdminInventario {
                 btnE.setOpaque(true); btnE.setBorderPainted(false);
                 btnE.setBorder(BorderFactory.createEmptyBorder(5, 12, 5, 12));
                 btnE.setCursor(new Cursor(Cursor.HAND_CURSOR));
-                btnE.addActionListener(e -> { stopCellEditing(); mostrarFormEditar(prod); });
+                btnE.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) { stopCellEditing(); mostrarFormEditar(prod); }
+                });
                 JButton btnD = new JButton("Eliminar");
                 btnD.setFont(new Font("Arial", Font.BOLD, 11));
                 btnD.setBackground(new Color(220, 38, 38)); btnD.setForeground(Color.WHITE);
                 btnD.setOpaque(true); btnD.setBorderPainted(false);
                 btnD.setBorder(BorderFactory.createEmptyBorder(5, 12, 5, 12));
                 btnD.setCursor(new Cursor(Cursor.HAND_CURSOR));
-                btnD.addActionListener(e -> {
-                    stopCellEditing();
-                    int ok = JOptionPane.showConfirmDialog(panel,
-                            "¿Eliminar \"" + prod.getNombre() + "\" del inventario?",
-                            "Confirmar", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-                    if (ok == JOptionPane.YES_OPTION) { ctrl.eliminarProducto(prod.getId(), panel); construir(); }
+                btnD.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        stopCellEditing();
+                        int ok = JOptionPane.showConfirmDialog(panel,
+                                "¿Eliminar \"" + prod.getNombre() + "\" del inventario?",
+                                "Confirmar", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                        if (ok == JOptionPane.YES_OPTION) { ctrl.eliminarProducto(prod.getId(), panel); construir(); }
+                    }
                 });
                 pnl.add(btnE); pnl.add(btnD);
                 return pnl;
@@ -330,23 +341,26 @@ public class PanelAdminInventario {
         btnFoto.setBorder(BorderFactory.createLineBorder(verde,1));
         btnFoto.setFocusPainted(false);
         btnFoto.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
-        btnFoto.addActionListener(e -> {
-            JFileChooser fc = new JFileChooser();
-            fc.setDialogTitle("Seleccionar foto del producto");
-            fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
-                    "Imagenes (jpg, png, gif)", "jpg","jpeg","png","gif","bmp"));
-            if (fc.showOpenDialog(dlg) == JFileChooser.APPROVE_OPTION) {
-                File f = fc.getSelectedFile();
-                try {
-                    fotoBytes[0] = Files.readAllBytes(f.toPath());
-                    BufferedImage img = ImageIO.read(f);
-                    if (img != null) {
-                        Image scaled = img.getScaledInstance(66, 66, Image.SCALE_SMOOTH);
-                        previewFoto.setIcon(new ImageIcon(scaled));
-                        previewFoto.setText("");
+        btnFoto.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JFileChooser fc = new JFileChooser();
+                fc.setDialogTitle("Seleccionar foto del producto");
+                fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
+                        "Imagenes (jpg, png, gif)", "jpg","jpeg","png","gif","bmp"));
+                if (fc.showOpenDialog(dlg) == JFileChooser.APPROVE_OPTION) {
+                    File f = fc.getSelectedFile();
+                    try {
+                        fotoBytes[0] = Files.readAllBytes(f.toPath());
+                        BufferedImage img = ImageIO.read(f);
+                        if (img != null) {
+                            Image scaled = img.getScaledInstance(66, 66, Image.SCALE_SMOOTH);
+                            previewFoto.setIcon(new ImageIcon(scaled));
+                            previewFoto.setText("");
+                        }
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(dlg, "No se pudo cargar la imagen.", "Error", JOptionPane.ERROR_MESSAGE);
                     }
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(dlg, "No se pudo cargar la imagen.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         });
@@ -377,7 +391,10 @@ public class PanelAdminInventario {
         btnCancelar.setBorder(BorderFactory.createLineBorder(verde,1));
         btnCancelar.setFocusPainted(false);
         btnCancelar.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
-        btnCancelar.addActionListener(e -> dlg.dispose());
+        btnCancelar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { dlg.dispose(); }
+        });
 
         JButton btnGuardar = new JButton("Guardar");
         btnGuardar.setFont(new Font("Arial",Font.BOLD,13));
@@ -385,12 +402,15 @@ public class PanelAdminInventario {
         btnGuardar.setOpaque(true); btnGuardar.setBorderPainted(false);
         btnGuardar.setFocusPainted(false);
         btnGuardar.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
-        btnGuardar.addActionListener(e -> {
-            boolean ok = ctrl.agregarProducto(
-                    tfNombre.getText(), tfTipo.getText(),
-                    tfMarca.getText(), tfPrecio.getText(),
-                    tfStock.getText(), fotoBytes[0], panel);
-            if (ok) { dlg.dispose(); recargar(); }
+        btnGuardar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                boolean ok = ctrl.agregarProducto(
+                        tfNombre.getText(), tfTipo.getText(),
+                        tfMarca.getText(), tfPrecio.getText(),
+                        tfStock.getText(), fotoBytes[0], panel);
+                if (ok) { dlg.dispose(); recargar(); }
+            }
         });
 
         bots.add(btnCancelar); bots.add(btnGuardar);
@@ -497,21 +517,24 @@ public class PanelAdminInventario {
         btnFoto.setBorder(BorderFactory.createLineBorder(verde,1));
         btnFoto.setFocusPainted(false);
         btnFoto.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
-        btnFoto.addActionListener(e -> {
-            JFileChooser fc = new JFileChooser();
-            fc.setDialogTitle("Seleccionar foto");
-            fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
-                    "Imagenes (jpg, png, gif)", "jpg","jpeg","png","gif","bmp"));
-            if (fc.showOpenDialog(dlg) == JFileChooser.APPROVE_OPTION) {
-                try {
-                    fotoBytes[0] = Files.readAllBytes(fc.getSelectedFile().toPath());
-                    BufferedImage img = ImageIO.read(fc.getSelectedFile());
-                    if (img != null) {
-                        previewFoto.setIcon(new ImageIcon(img.getScaledInstance(66,66,Image.SCALE_SMOOTH)));
-                        previewFoto.setText("");
+        btnFoto.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JFileChooser fc = new JFileChooser();
+                fc.setDialogTitle("Seleccionar foto");
+                fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
+                        "Imagenes (jpg, png, gif)", "jpg","jpeg","png","gif","bmp"));
+                if (fc.showOpenDialog(dlg) == JFileChooser.APPROVE_OPTION) {
+                    try {
+                        fotoBytes[0] = Files.readAllBytes(fc.getSelectedFile().toPath());
+                        BufferedImage img = ImageIO.read(fc.getSelectedFile());
+                        if (img != null) {
+                            previewFoto.setIcon(new ImageIcon(img.getScaledInstance(66,66,Image.SCALE_SMOOTH)));
+                            previewFoto.setText("");
+                        }
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(dlg,"No se pudo cargar la imagen.","Error",JOptionPane.ERROR_MESSAGE);
                     }
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(dlg,"No se pudo cargar la imagen.","Error",JOptionPane.ERROR_MESSAGE);
                 }
             }
         });
@@ -541,7 +564,10 @@ public class PanelAdminInventario {
         btnCancelar.setBorder(BorderFactory.createLineBorder(verde,1));
         btnCancelar.setFocusPainted(false);
         btnCancelar.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
-        btnCancelar.addActionListener(e -> dlg.dispose());
+        btnCancelar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { dlg.dispose(); }
+        });
 
         JButton btnGuardar = new JButton("Guardar cambios");
         btnGuardar.setFont(new Font("Arial",Font.BOLD,13));
@@ -549,20 +575,23 @@ public class PanelAdminInventario {
         btnGuardar.setOpaque(true); btnGuardar.setBorderPainted(false);
         btnGuardar.setFocusPainted(false);
         btnGuardar.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
-        btnGuardar.addActionListener(e -> {
-            try {
-                String nombre = tfNombre.getText().trim();
-                if (nombre.isEmpty()) { JOptionPane.showMessageDialog(dlg,"El nombre es obligatorio.","Error",JOptionPane.ERROR_MESSAGE); return; }
-                prod.setNombre(nombre);
-                prod.setTipo(tfTipo.getText().trim().isEmpty()  ? null : tfTipo.getText().trim());
-                prod.setMarca(tfMarca.getText().trim().isEmpty() ? null : tfMarca.getText().trim());
-                prod.setPrecio(new java.math.BigDecimal(tfPrecio.getText().trim()));
-                prod.setStock(Integer.parseInt(tfStock.getText().trim()));
-                prod.setFoto(fotoBytes[0]);
-                boolean ok = ctrl.actualizarProducto(prod, panel);
-                if (ok) { dlg.dispose(); recargar(); }
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(dlg,"Precio y stock deben ser números válidos.","Error",JOptionPane.ERROR_MESSAGE);
+        btnGuardar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    String nombre = tfNombre.getText().trim();
+                    if (nombre.isEmpty()) { JOptionPane.showMessageDialog(dlg,"El nombre es obligatorio.","Error",JOptionPane.ERROR_MESSAGE); return; }
+                    prod.setNombre(nombre);
+                    prod.setTipo(tfTipo.getText().trim().isEmpty()  ? null : tfTipo.getText().trim());
+                    prod.setMarca(tfMarca.getText().trim().isEmpty() ? null : tfMarca.getText().trim());
+                    prod.setPrecio(new java.math.BigDecimal(tfPrecio.getText().trim()));
+                    prod.setStock(Integer.parseInt(tfStock.getText().trim()));
+                    prod.setFoto(fotoBytes[0]);
+                    boolean ok = ctrl.actualizarProducto(prod, panel);
+                    if (ok) { dlg.dispose(); recargar(); }
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(dlg,"Precio y stock deben ser números válidos.","Error",JOptionPane.ERROR_MESSAGE);
+                }
             }
         });
 

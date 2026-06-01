@@ -20,7 +20,6 @@ import java.util.concurrent.ExecutionException;
 
 public class PanelAdminVacunas {
     public JPanel panel;
-    private boolean temaOscuro = false;
     private JTable tabla;
     private List<Control_vacunas> lista = null;
 
@@ -34,22 +33,15 @@ public class PanelAdminVacunas {
             new Color(234,88,12),   new Color(187,224,200), new Color(15,60,30),  new Color(134,190,155),
             new Color(220,38,38),   new Color(22,163,74),   new Color(210,240,220),
     };
-    private final Color[] OSCURO = {
-            new Color(18,24,38),   new Color(13,18,30),   new Color(26,34,52),  new Color(37,55,90),
-            new Color(32,42,64),   Color.WHITE,            new Color(226,232,240), new Color(148,163,184),
-            new Color(251,146,60), new Color(30,41,59),   new Color(9,14,24),   new Color(122,175,212),
-            new Color(239,68,68),  new Color(34,197,94),  new Color(15,23,42),
-    };
     private Color[] C = CLARO;
 
     public PanelAdminVacunas() { panel = new JPanel(new BorderLayout()); construir(); }
-    public void setTema(boolean o) { if (o != temaOscuro) { temaOscuro = o; lista = null; construir(); } }
     public void recargar()        { lista = null; construir(); }
 
     private void construir() {
-        panel.removeAll(); C = temaOscuro ? OSCURO : CLARO;
+        panel.removeAll(); C = CLARO;
         panel.setBackground(C[0]);
-        panel.add(SidebarAdmin.crear(C, temaOscuro, "adminVacunas", panel), BorderLayout.WEST);
+        panel.add(SidebarAdmin.crear(C, "adminVacunas", panel), BorderLayout.WEST);
 
         if (lista != null) {
             panel.add(crearContenido(), BorderLayout.CENTER);
@@ -106,9 +98,12 @@ public class PanelAdminVacunas {
     }
 
     private JPanel crearContenido() {
-        long vencidas = lista.stream().filter(cv -> "Vencida".equals(cv.getEstado())).count();
-        long proximas = lista.stream().filter(cv -> "Próxima".equals(cv.getEstado())).count();
-        long alDia    = lista.stream().filter(cv -> "Al día" .equals(cv.getEstado())).count();
+        long vencidas = 0;
+        for (Control_vacunas cv : lista) { if ("Vencida".equals(cv.getEstado())) vencidas++; }
+        long proximas = 0;
+        for (Control_vacunas cv : lista) { if ("Próxima".equals(cv.getEstado())) proximas++; }
+        long alDia = 0;
+        for (Control_vacunas cv : lista) { if ("Al día".equals(cv.getEstado())) alDia++; }
 
         JPanel c = new JPanel(new BorderLayout()); c.setBackground(C[0]);
 
@@ -122,7 +117,10 @@ public class PanelAdminVacunas {
         tl.add(lbl("Control y seguimiento del plan de vacunación", 12, Font.PLAIN, C[7]));
         JPanel tr = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0)); tr.setBackground(C[2]);
         JButton btnNueva = btnPrimario("+ Nueva vacuna");
-        btnNueva.addActionListener(e -> abrirFormulario(null));
+        btnNueva.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { abrirFormulario(null); }
+        });
         tr.add(btnNueva);
         tb.add(tl, BorderLayout.WEST); tb.add(tr, BorderLayout.EAST);
         c.add(tb, BorderLayout.NORTH);
@@ -131,11 +129,15 @@ public class PanelAdminVacunas {
         body.setBackground(C[0]); body.setBorder(BorderFactory.createEmptyBorder(24, 28, 28, 28));
 
         // ── Stats ─────────────────────────────────────────────────────
-        JPanel stats = new JPanel(new GridLayout(1, 3, 16, 0)); stats.setBackground(C[0]);
+        List<org.example.model.Citas> sinAsignar = ctrl.listarCitasVacunSinRegistro();
+        long sinVacuna = sinAsignar.size();
+
+        JPanel stats = new JPanel(new GridLayout(1, 4, 16, 0)); stats.setBackground(C[0]);
         Object[][] st = {
                 {"Vencidas",           String.valueOf(vencidas), C[12]},
                 {"Próximas (30 días)", String.valueOf(proximas), C[8]},
                 {"Al día",             String.valueOf(alDia),    C[13]},
+                {"Sin vacuna asignada",String.valueOf(sinVacuna), new Color(180,80,0)},
         };
         for (Object[] s : st) {
             JPanel card = new JPanel(new BorderLayout(0, 4)); card.setBackground(C[2]);
@@ -146,7 +148,38 @@ public class PanelAdminVacunas {
             card.add(lbl((String) s[1], 28, Font.BOLD, (Color) s[2]), BorderLayout.CENTER);
             stats.add(card);
         }
-        body.add(stats, BorderLayout.NORTH);
+
+        // Banner de citas sin vacuna asignada
+        JPanel bannerWrapper = new JPanel(new BorderLayout(0, 8));
+        bannerWrapper.setBackground(C[0]);
+        bannerWrapper.add(stats, BorderLayout.NORTH);
+
+        if (sinVacuna > 0) {
+            JPanel bannerSin = new JPanel();
+            bannerSin.setLayout(new BoxLayout(bannerSin, BoxLayout.Y_AXIS));
+            bannerSin.setBackground(new Color(255, 247, 230));
+            bannerSin.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(217, 119, 6), 1),
+                    BorderFactory.createEmptyBorder(10, 14, 10, 14)));
+
+            JLabel lTit = new JLabel("⚠  " + sinVacuna + " cita(s) de vacunacion sin vacuna asignada — asigna el tipo antes de atender al cliente");
+            lTit.setFont(new Font("Arial", Font.BOLD, 12));
+            lTit.setForeground(new Color(120, 60, 0));
+            bannerSin.add(lTit);
+
+            for (org.example.model.Citas cv : sinAsignar) {
+                String mascota = cv.getMascota() != null ? cv.getMascota().getNombre() : "?";
+                String dueno   = (cv.getMascota() != null && cv.getMascota().getCliente() != null)
+                        ? cv.getMascota().getCliente().getNombre() : "?";
+                String fecha   = cv.getFechaCita() != null ? cv.getFechaCita().toString() : "?";
+                JLabel lFila = new JLabel("  • " + mascota + " (" + dueno + ")  —  " + fecha);
+                lFila.setFont(new Font("Arial", Font.PLAIN, 11));
+                lFila.setForeground(new Color(100, 50, 0));
+                bannerSin.add(lFila);
+            }
+            bannerWrapper.add(bannerSin, BorderLayout.CENTER);
+        }
+        body.add(bannerWrapper, BorderLayout.NORTH);
 
         // ── Tabla ─────────────────────────────────────────────────────
         String[] cols = {"Mascota", "Dueño", "Vacuna", "Fecha aplicación", "Próxima dosis", "Estado"};
@@ -175,7 +208,7 @@ public class PanelAdminVacunas {
         tabla.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         JTableHeader th = tabla.getTableHeader();
-        th.setBackground(C[14]); th.setForeground(temaOscuro ? C[7] : C[1]);
+        th.setBackground(C[14]); th.setForeground(C[1]);
         th.setFont(new Font("Arial", Font.BOLD, 11));
         th.setReorderingAllowed(false); th.setPreferredSize(new Dimension(0, 36));
 
@@ -220,27 +253,44 @@ public class PanelAdminVacunas {
         JButton btnEliminar = btnDanger("Eliminar");
         btnEditar.setEnabled(false); btnEliminar.setEnabled(false);
 
-        tabla.getSelectionModel().addListSelectionListener(ev -> {
-            if (!ev.getValueIsAdjusting()) {
-                boolean sel = tabla.getSelectedRow() >= 0;
-                btnEditar.setEnabled(sel); btnEliminar.setEnabled(sel);
+        tabla.getSelectionModel().addListSelectionListener(new javax.swing.event.ListSelectionListener() {
+            @Override
+            public void valueChanged(javax.swing.event.ListSelectionEvent ev) {
+                if (!ev.getValueIsAdjusting()) {
+                    boolean sel = tabla.getSelectedRow() >= 0;
+                    btnEditar.setEnabled(sel); btnEliminar.setEnabled(sel);
+                }
             }
         });
-        btnEditar.addActionListener(e -> {
-            int row = tabla.getSelectedRow();
-            if (row >= 0) abrirFormulario(lista.get(row));
+        btnEditar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int row = tabla.getSelectedRow();
+                if (row >= 0) abrirFormulario(lista.get(row));
+            }
         });
-        btnEliminar.addActionListener(e -> {
-            int row = tabla.getSelectedRow();
-            if (row < 0) return;
-            Control_vacunas cv = lista.get(row);
-            String nom = cv.getMascota() != null ? cv.getMascota().getNombre() : "esta mascota";
-            int conf = JOptionPane.showConfirmDialog(panel,
-                    "¿Eliminar el registro de vacuna de " + nom + "?",
-                    "Confirmar eliminación", JOptionPane.YES_NO_OPTION);
-            if (conf == JOptionPane.YES_OPTION) {
-                try { ctrl.eliminar(cv.getId()); recargar(); }
-                catch (Exception ex) { JOptionPane.showMessageDialog(panel, "Error: " + ex.getMessage()); }
+        btnEliminar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int row = tabla.getSelectedRow();
+                if (row < 0) return;
+                Control_vacunas cv = lista.get(row);
+                String nom = cv.getMascota() != null ? cv.getMascota().getNombre() : "esta mascota";
+                int conf = JOptionPane.showConfirmDialog(panel,
+                        "<html>¿Eliminar el registro de vacuna de <b>" + nom + "</b>?<br>" +
+                        "<i>Si hay una cita de vacunacion asociada, también quedará cancelada<br>y se enviará correo al cliente.</i></html>",
+                        "Confirmar eliminación", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                if (conf == JOptionPane.YES_OPTION) {
+                    try {
+                        ctrl.eliminarConCancelacion(cv, panel);
+                        JOptionPane.showMessageDialog(panel,
+                                "Vacuna eliminada" + (cv.getMascota() != null ? " y cita cancelada si existia." : "."),
+                                "Listo", JOptionPane.INFORMATION_MESSAGE);
+                        recargar();
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(panel, "Error: " + ex.getMessage());
+                    }
+                }
             }
         });
         acciones.add(btnEditar); acciones.add(btnEliminar);
@@ -268,7 +318,7 @@ public class PanelAdminVacunas {
         JDialog dialog = new JDialog(owner,
                 editando ? "Editar registro de vacuna" : "Registrar vacuna",
                 Dialog.ModalityType.APPLICATION_MODAL);
-        dialog.setSize(500, 380);
+        dialog.setSize(500, 430);
         dialog.setLocationRelativeTo(panel);
         dialog.setResizable(false);
 
@@ -280,15 +330,53 @@ public class PanelAdminVacunas {
         gbc.insets = new Insets(7, 6, 7, 6);
 
         // Cargar catálogos
-        List<Mascotas> mascotas = ctrl.listarMascotas();
-        List<Vacunas>  vacunas  = ctrl.listarVacunas();
+        List<Mascotas> todasMascotas = ctrl.listarMascotas();
+        List<Vacunas>  vacunas       = ctrl.listarVacunas();
+        List<org.example.model.Cliente> clientes = org.example.model.Cliente.consultarTodosBD();
 
-        JComboBox<Mascotas> cmbMascota = new JComboBox<>(mascotas.toArray(new Mascotas[0]));
+        // ── Combo de CLIENTE ──────────────────────────────
+        JComboBox<Object> cmbCliente = new JComboBox<>();
+        cmbCliente.addItem("— Selecciona un cliente —");
+        for (org.example.model.Cliente cl : clientes) cmbCliente.addItem(cl);
+        cmbCliente.setRenderer(new DefaultListCellRenderer() {
+            public Component getListCellRendererComponent(JList<?> list, Object v, int idx, boolean sel, boolean focus) {
+                super.getListCellRendererComponent(list, v, idx, sel, focus);
+                if (v instanceof org.example.model.Cliente)
+                    setText(((org.example.model.Cliente) v).getNombre());
+                return this;
+            }
+        });
+
+        // ── Combo de MASCOTA (filtrado por cliente) ───────
+        JComboBox<Mascotas> cmbMascota = new JComboBox<>();
+        cmbMascota.addItem(null);
         cmbMascota.setRenderer(new DefaultListCellRenderer() {
             public Component getListCellRendererComponent(JList<?> list, Object v, int idx, boolean sel, boolean focus) {
                 super.getListCellRendererComponent(list, v, idx, sel, focus);
                 if (v instanceof Mascotas) setText(((Mascotas) v).getEtiqueta());
+                else setText("— Primero selecciona un cliente —");
                 return this;
+            }
+        });
+        cmbMascota.setEnabled(false);
+
+        // Cuando cambia el cliente, actualizar mascotas
+        cmbCliente.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Object sel = cmbCliente.getSelectedItem();
+                cmbMascota.removeAllItems();
+                cmbMascota.addItem(null);
+                if (sel instanceof org.example.model.Cliente) {
+                    org.example.model.Cliente cl = (org.example.model.Cliente) sel;
+                    for (Mascotas m : todasMascotas) {
+                        if (m.getCliente() != null && m.getCliente().getId().equals(cl.getId()))
+                            cmbMascota.addItem(m);
+                    }
+                    cmbMascota.setEnabled(true);
+                } else {
+                    cmbMascota.setEnabled(false);
+                }
             }
         });
 
@@ -306,8 +394,25 @@ public class PanelAdminVacunas {
 
         // Pre-poblar si es edición
         if (editando) {
-            for (Mascotas m : mascotas) {
-                if (m.getId().equals(existing.getMascota().getId())) { cmbMascota.setSelectedItem(m); break; }
+            // Pre-seleccionar cliente
+            if (existing.getMascota() != null && existing.getMascota().getCliente() != null) {
+                for (int i = 0; i < cmbCliente.getItemCount(); i++) {
+                    Object item = cmbCliente.getItemAt(i);
+                    if (item instanceof org.example.model.Cliente &&
+                            ((org.example.model.Cliente) item).getId().equals(
+                                    existing.getMascota().getCliente().getId())) {
+                        cmbCliente.setSelectedIndex(i);
+                        break;
+                    }
+                }
+            }
+            // Pre-seleccionar mascota (el listener ya pobló el combo)
+            for (int i = 0; i < cmbMascota.getItemCount(); i++) {
+                Object item = cmbMascota.getItemAt(i);
+                if (item instanceof Mascotas &&
+                        ((Mascotas) item).getId().equals(existing.getMascota().getId())) {
+                    cmbMascota.setSelectedIndex(i); break;
+                }
             }
             for (Vacunas v : vacunas) {
                 if (v.getId().equals(existing.getVacuna().getId())) { cmbVacuna.setSelectedItem(v); break; }
@@ -320,6 +425,7 @@ public class PanelAdminVacunas {
 
         // Layout del formulario
         Object[][] filas = {
+            {"Cliente:",          cmbCliente},
             {"Mascota:",          cmbMascota},
             {"Vacuna:",           cmbVacuna},
             {"Fecha aplicación:", dtAplic},
@@ -341,8 +447,13 @@ public class PanelAdminVacunas {
         estilizarTema(btnCancelar);
         JButton btnGuardar = btnPrimario("Guardar");
 
-        btnCancelar.addActionListener(e -> dialog.dispose());
-        btnGuardar.addActionListener(e -> {
+        btnCancelar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { dialog.dispose(); }
+        });
+        btnGuardar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
             Mascotas mascSel = (Mascotas) cmbMascota.getSelectedItem();
             Vacunas  vacSel  = (Vacunas)  cmbVacuna.getSelectedItem();
             java.util.Date dAplic = dtAplic.getDate();
@@ -416,6 +527,7 @@ public class PanelAdminVacunas {
                 }
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(dialog, "Error al guardar: " + ex.getMessage());
+            }
             }
         });
         btns.add(btnCancelar); btns.add(btnGuardar);

@@ -47,10 +47,13 @@ public class AgendarCitaController {
             try { hora = LocalTime.parse(horaStr.trim()); }
             catch (DateTimeParseException e) { throw new Exception("Formato de hora invalido. Usa: HH:mm"); }
 
-            List<Citas> citasActivas = Citas.consultarTodosBD().stream()
-                    .filter(c -> c.getEstadoCita() != EstadoCita.CANCELADA
-                              && c.getEstadoCita() != EstadoCita.COMPLETADA)
-                    .collect(java.util.stream.Collectors.toList());
+            List<Citas> citasActivas = new java.util.ArrayList<>();
+            for (Citas c : Citas.consultarTodosBD()) {
+                if (c.getEstadoCita() != EstadoCita.CANCELADA
+                        && c.getEstadoCita() != EstadoCita.COMPLETADA) {
+                    citasActivas.add(c);
+                }
+            }
             boolean hayCupo = citasActivas.size() < LIMITE_CUPO;
             EstadoCita estadoNuevo = hayCupo ? EstadoCita.CONFIRMADA : EstadoCita.PENDIENTE;
 
@@ -88,14 +91,21 @@ public class AgendarCitaController {
 
                 if (correoCliente != null && !correoCliente.isEmpty()) {
                     final String cf = correoCliente, nf = nombreCliente, bf = cuerpo;
-                    new Thread(() -> {
-                        try {
-                            CorreoService.enviarCorreoGeneral(cf, nf, "Confirmacion de cita - Kampets", bf);
-                        } catch (Exception ex) {
-                            SwingUtilities.invokeLater(() ->
-                                    JOptionPane.showMessageDialog(panel,
-                                            "Cita guardada, pero el correo no se pudo enviar:\n" + ex.getMessage(),
-                                            "Aviso de correo", JOptionPane.WARNING_MESSAGE));
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                CorreoService.enviarCorreoGeneral(cf, nf, "Confirmacion de cita - Kampets", bf);
+                            } catch (Exception ex) {
+                                SwingUtilities.invokeLater(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        JOptionPane.showMessageDialog(panel,
+                                                "Cita guardada, pero el correo no se pudo enviar:\n" + ex.getMessage(),
+                                                "Aviso de correo", JOptionPane.WARNING_MESSAGE);
+                                    }
+                                });
+                            }
                         }
                     }).start();
                 }

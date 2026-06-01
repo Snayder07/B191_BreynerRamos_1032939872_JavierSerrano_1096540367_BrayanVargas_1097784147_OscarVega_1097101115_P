@@ -19,7 +19,6 @@ import java.util.Locale;
 
 public class PanelCliente {
     public JPanel panel;
-    private boolean temaOscuro = false;
 
     private final CitaAdminController ctrl = new CitaAdminController();
     private List<Citas> cachedCitas = null;
@@ -31,13 +30,6 @@ public class PanelCliente {
             new Color(208, 228, 244), new Color(15,  53,   96), new Color(122, 175, 212),
             new Color(168, 200, 232), new Color(168, 212, 245),
     };
-    private final Color[] OSCURO = {
-            new Color(18,  24,  38),  new Color(13,  18,  30),  new Color(26,  34,  52),
-            new Color(37,  55,  90),  new Color(32,  42,  64),  Color.WHITE,
-            new Color(226, 232, 240), new Color(100, 116, 139), new Color(251, 146,  60),
-            new Color(30,  41,  59),  new Color(9,   14,  24),  new Color(122, 175, 212),
-            new Color(80,  120, 170), new Color(100, 160, 210),
-    };
     private Color[] C = CLARO;
 
     public PanelCliente() {
@@ -45,15 +37,11 @@ public class PanelCliente {
         construir();
     }
 
-    public void setTema(boolean oscuro) {
-        if (oscuro != temaOscuro) { temaOscuro = oscuro; construir(); }
-    }
-
     public void recargar() { cachedCitas = null; construir(); }
 
     private void construir() {
         panel.removeAll();
-        C = temaOscuro ? OSCURO : CLARO;
+        C = CLARO;
         panel.setBackground(C[0]);
         panel.add(crearSidebar(), BorderLayout.WEST);
 
@@ -296,7 +284,10 @@ public class PanelCliente {
         btnEditar.setFont(new Font("Arial", Font.PLAIN, 13));
         btnEditar.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(C[9], 1), BorderFactory.createEmptyBorder(7, 14, 7, 14)));
-        btnEditar.addActionListener(e -> mostrarFormEditarPerfil());
+        btnEditar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { mostrarFormEditarPerfil(); }
+        });
 
         topRight.add(btnEditar); topRight.add(btnMascotas); topRight.add(btnAgendar);
         topbar.add(topLeft, BorderLayout.WEST); topbar.add(topRight, BorderLayout.EAST);
@@ -404,7 +395,7 @@ public class PanelCliente {
                 badge.setHorizontalAlignment(SwingConstants.RIGHT);
                 final Integer idCita = c.getId();
                 JLabel cancelar = crearLabel("Cancelar cita", 11, Font.PLAIN,
-                        temaOscuro ? new Color(80, 110, 150) : new Color(176, 200, 224));
+                        new Color(176, 200, 224));
                 cancelar.setHorizontalAlignment(SwingConstants.RIGHT);
                 cancelar.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
                 cancelar.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -508,7 +499,10 @@ public class PanelCliente {
         btnCancelar.setBorder(BorderFactory.createLineBorder(azul, 1));
         btnCancelar.setFocusPainted(false);
         btnCancelar.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
-        btnCancelar.addActionListener(e -> dlg.dispose());
+        btnCancelar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { dlg.dispose(); }
+        });
 
         JButton btnGuardar = new JButton("Guardar cambios");
         btnGuardar.setFont(new Font("Arial", Font.BOLD, 13));
@@ -516,7 +510,9 @@ public class PanelCliente {
         btnGuardar.setOpaque(true); btnGuardar.setBorderPainted(false);
         btnGuardar.setFocusPainted(false);
         btnGuardar.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
-        btnGuardar.addActionListener(e -> {
+        btnGuardar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
             String nombre = tfNombre.getText().trim();
             if (nombre.isEmpty()) {
                 JOptionPane.showMessageDialog(dlg, "El nombre es obligatorio.", "Error", JOptionPane.ERROR_MESSAGE);
@@ -556,6 +552,7 @@ public class PanelCliente {
                 construir();
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(dlg, "Error al guardar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
             }
         });
 

@@ -1,5 +1,6 @@
 package org.example.view;
 
+import com.toedter.calendar.JDateChooser;
 import org.example.controller.MascotaAdminController;
 import org.example.model.Cliente;
 import org.example.model.Especies;
@@ -9,11 +10,11 @@ import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
 import java.awt.*;
+import java.awt.event.*;
 import java.util.List;
 
 public class PanelAdminMascotas {
     public JPanel panel;
-    private boolean temaOscuro = false;
     private final MascotaAdminController ctrl = new MascotaAdminController();
 
     private final Color[] CLARO = {
@@ -22,22 +23,15 @@ public class PanelAdminMascotas {
             new Color(234,88,12),new Color(187,224,200),new Color(15,60,30),new Color(134,190,155),
             new Color(220,38,38),new Color(22,163,74),new Color(210,240,220),
     };
-    private final Color[] OSCURO = {
-            new Color(18,24,38),new Color(13,18,30),new Color(26,34,52),new Color(37,55,90),
-            new Color(32,42,64),Color.WHITE,new Color(226,232,240),new Color(148,163,184),
-            new Color(251,146,60),new Color(30,41,59),new Color(9,14,24),new Color(122,175,212),
-            new Color(239,68,68),new Color(34,197,94),new Color(15,23,42),
-    };
     private Color[] C = CLARO;
 
     public PanelAdminMascotas() { panel = new JPanel(new BorderLayout()); construir(); }
-    public void setTema(boolean o) { if(o!=temaOscuro){temaOscuro=o;construir();} }
     public void recargar() { construir(); }
 
     private void construir() {
-        panel.removeAll(); C = temaOscuro ? OSCURO : CLARO;
+        panel.removeAll(); C = CLARO;
         panel.setBackground(C[0]);
-        panel.add(SidebarAdmin.crear(C, temaOscuro, "adminMascotas", panel), BorderLayout.WEST);
+        panel.add(SidebarAdmin.crear(C, "adminMascotas", panel), BorderLayout.WEST);
         panel.add(crearContenido(), BorderLayout.CENTER);
         panel.revalidate(); panel.repaint();
     }
@@ -53,21 +47,39 @@ public class PanelAdminMascotas {
         tl.add(lbl("Mascotas registradas",22,Font.BOLD,C[6]));
         tl.add(lbl("Gestión de mascotas en el sistema",12,Font.PLAIN,C[7]));
         JPanel tr = new JPanel(new FlowLayout(FlowLayout.RIGHT,10,0)); tr.setBackground(C[2]);
-        JButton btnNueva = new JButton("+ Registrar mascota");
-        btnNueva.setFont(new Font("Arial",Font.BOLD,13)); btnNueva.setBackground(new Color(22,163,74));
-        btnNueva.setForeground(Color.WHITE); btnNueva.setOpaque(true); btnNueva.setBorderPainted(false);
-        btnNueva.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
-        btnNueva.setBorder(BorderFactory.createEmptyBorder(9,18,9,18));
-        btnNueva.addActionListener(e -> abrirDialogoRegistro());
-        tr.add(btnNueva);
+
+        JButton btnNuevoCliente = new JButton("+ Nuevo cliente y mascota");
+        btnNuevoCliente.setFont(new Font("Arial",Font.BOLD,13)); btnNuevoCliente.setBackground(new Color(22,163,74));
+        btnNuevoCliente.setForeground(Color.WHITE); btnNuevoCliente.setOpaque(true); btnNuevoCliente.setBorderPainted(false);
+        btnNuevoCliente.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
+        btnNuevoCliente.setBorder(BorderFactory.createEmptyBorder(9,18,9,18));
+        btnNuevoCliente.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { abrirDialogoNuevoCliente(); }
+        });
+
+        JButton btnNuevaMascota = new JButton("+ Mascota a cliente existente");
+        btnNuevaMascota.setFont(new Font("Arial",Font.BOLD,13)); btnNuevaMascota.setBackground(new Color(37,99,235));
+        btnNuevaMascota.setForeground(Color.WHITE); btnNuevaMascota.setOpaque(true); btnNuevaMascota.setBorderPainted(false);
+        btnNuevaMascota.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
+        btnNuevaMascota.setBorder(BorderFactory.createEmptyBorder(9,18,9,18));
+        btnNuevaMascota.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { abrirDialogoRegistro(); }
+        });
+
+        tr.add(btnNuevaMascota);
+        tr.add(btnNuevoCliente);
         tb.add(tl,BorderLayout.WEST); tb.add(tr,BorderLayout.EAST); c.add(tb,BorderLayout.NORTH);
 
         JPanel body = new JPanel(new BorderLayout(0,16)); body.setBackground(C[0]); body.setBorder(BorderFactory.createEmptyBorder(24,28,28,28));
 
         List<Mascotas> todas = ctrl.listarTodas();
         long total  = todas.size();
-        long perros = todas.stream().filter(m -> m.getEspecie()!=null && m.getEspecie().getNombre().equalsIgnoreCase("Perro")).count();
-        long gatos  = todas.stream().filter(m -> m.getEspecie()!=null && m.getEspecie().getNombre().equalsIgnoreCase("Gato")).count();
+        long perros = 0;
+        for (Mascotas m : todas) { if (m.getEspecie()!=null && m.getEspecie().getNombre().equalsIgnoreCase("Perro")) perros++; }
+        long gatos = 0;
+        for (Mascotas m : todas) { if (m.getEspecie()!=null && m.getEspecie().getNombre().equalsIgnoreCase("Gato")) gatos++; }
         long otros  = total - perros - gatos;
 
         JPanel stats = new JPanel(new GridLayout(1,4,16,0)); stats.setBackground(C[0]);
@@ -101,7 +113,7 @@ public class PanelAdminMascotas {
         tabla.setFont(new Font("Arial",Font.PLAIN,13)); tabla.setRowHeight(40);
         tabla.setShowGrid(false); tabla.setIntercellSpacing(new Dimension(0,0));
         tabla.setSelectionBackground(C[3]); tabla.setFillsViewportHeight(true);
-        JTableHeader th = tabla.getTableHeader(); th.setBackground(C[14]); th.setForeground(temaOscuro?C[7]:C[1]);
+        JTableHeader th = tabla.getTableHeader(); th.setBackground(C[14]); th.setForeground(C[1]);
         th.setFont(new Font("Arial",Font.BOLD,11)); th.setReorderingAllowed(false); th.setPreferredSize(new Dimension(0,36));
 
         DefaultTableCellRenderer base = new DefaultTableCellRenderer(){
@@ -168,9 +180,13 @@ public class PanelAdminMascotas {
         });
         estilizarCombo(cbCliente); form.add(cbCliente); form.add(Box.createVerticalStrut(14));
 
-        form.add(campLbl("Fecha de nacimiento (yyyy-MM-dd)"));
-        JTextField tfFecha = campo(); tfFecha.setToolTipText("Ejemplo: 2021-03-15");
-        form.add(tfFecha); form.add(Box.createVerticalStrut(14));
+        form.add(campLbl("Fecha de nacimiento (opcional)"));
+        JDateChooser dcFecha = new JDateChooser();
+        dcFecha.setDateFormatString("yyyy-MM-dd");
+        dcFecha.setFont(new Font("Arial", Font.PLAIN, 13));
+        dcFecha.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        dcFecha.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+        form.add(dcFecha); form.add(Box.createVerticalStrut(14));
 
         form.add(campLbl("Sexo"));
         JComboBox<String> cbSexo = new JComboBox<>(new String[]{"","Macho","Hembra"});
@@ -209,38 +225,51 @@ public class PanelAdminMascotas {
         btnCancel.setBackground(C[0]); btnCancel.setForeground(C[6]);
         btnCancel.setFont(new Font("Arial",Font.PLAIN,13)); btnCancel.setOpaque(true);
         btnCancel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(C[9],1),BorderFactory.createEmptyBorder(8,16,8,16)));
-        btnCancel.addActionListener(e -> dlg.dispose());
+        btnCancel.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { dlg.dispose(); }
+        });
 
         JButton btnGuardar = new JButton("Registrar");
         btnGuardar.setBackground(new Color(22,163,74)); btnGuardar.setForeground(Color.WHITE);
         btnGuardar.setFont(new Font("Arial",Font.BOLD,13)); btnGuardar.setOpaque(true); btnGuardar.setBorderPainted(false);
         btnGuardar.setBorder(BorderFactory.createEmptyBorder(8,18,8,18));
-        btnGuardar.addActionListener(e -> {
-            Especies esp = cbEspecie.getSelectedItem() instanceof Especies ? (Especies)cbEspecie.getSelectedItem() : null;
-            Cliente cl   = cbCliente.getSelectedItem() instanceof Cliente  ? (Cliente)cbCliente.getSelectedItem()  : null;
-            String sexo  = (String)cbSexo.getSelectedItem();
-            boolean ok = ctrl.registrarMascota(
-                    tfNombre.getText(), esp, cl,
-                    tfFecha.getText(), (sexo==null||sexo.isBlank())?null:sexo,
-                    tfCar.getText(), form,
-                    () -> {
-                        // Resaltar campo en rojo y enfocar
-                        tfCar.setBorder(BorderFactory.createCompoundBorder(
-                                BorderFactory.createLineBorder(bordeError, 2),
-                                BorderFactory.createEmptyBorder(8,10,8,10)));
-                        lblError.setText("⚠ Este campo es obligatorio para distinguir la mascota");
-                        lblError.setVisible(true);
-                        tfCar.requestFocusInWindow();
-                        form.revalidate();
-                    });
-            if (ok) {
-                dlg.dispose();
-                recargar();
-                int resp = JOptionPane.showConfirmDialog(panel,
-                    "Mascota registrada.\n¿Deseas ir a registrar las vacunas de " + tfNombre.getText().trim() + " ahora?",
-                    "Registrar vacunas", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-                if (resp == JOptionPane.YES_OPTION) {
-                    Main.cambiarPantalla("adminVacunas");
+        btnGuardar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Especies esp = cbEspecie.getSelectedItem() instanceof Especies ? (Especies)cbEspecie.getSelectedItem() : null;
+                Cliente cl   = cbCliente.getSelectedItem() instanceof Cliente  ? (Cliente)cbCliente.getSelectedItem()  : null;
+                String sexo  = (String)cbSexo.getSelectedItem();
+                String fechaReg = "";
+                if (dcFecha.getDate() != null) {
+                    java.text.SimpleDateFormat sdf2 = new java.text.SimpleDateFormat("yyyy-MM-dd");
+                    fechaReg = sdf2.format(dcFecha.getDate());
+                }
+                boolean ok = ctrl.registrarMascota(
+                        tfNombre.getText(), esp, cl,
+                        fechaReg, (sexo==null||sexo.isBlank())?null:sexo,
+                        tfCar.getText(), form,
+                        new Runnable() {
+                            @Override
+                            public void run() {
+                                tfCar.setBorder(BorderFactory.createCompoundBorder(
+                                        BorderFactory.createLineBorder(bordeError, 2),
+                                        BorderFactory.createEmptyBorder(8,10,8,10)));
+                                lblError.setText("⚠ Este campo es obligatorio para distinguir la mascota");
+                                lblError.setVisible(true);
+                                tfCar.requestFocusInWindow();
+                                form.revalidate();
+                            }
+                        });
+                if (ok) {
+                    dlg.dispose();
+                    recargar();
+                    int resp = JOptionPane.showConfirmDialog(panel,
+                        "Mascota registrada.\n¿Deseas ir a registrar las vacunas de " + tfNombre.getText().trim() + " ahora?",
+                        "Registrar vacunas", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+                    if (resp == JOptionPane.YES_OPTION) {
+                        Main.cambiarPantalla("adminVacunas");
+                    }
                 }
             }
         });
@@ -248,6 +277,165 @@ public class PanelAdminMascotas {
         form.add(btnRow);
 
         JScrollPane scroll = new JScrollPane(form); scroll.setBorder(null); scroll.getViewport().setBackground(C[2]);
+        dlg.add(scroll);
+        dlg.setVisible(true);
+    }
+
+    private void abrirDialogoNuevoCliente() {
+        JDialog dlg = new JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(panel),
+                "Nuevo cliente y mascota", true);
+        dlg.setSize(500, 680);
+        dlg.setLocationRelativeTo(panel);
+        dlg.setResizable(false);
+
+        JPanel form = new JPanel();
+        form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
+        form.setBackground(C[2]);
+        form.setBorder(BorderFactory.createEmptyBorder(28, 32, 28, 32));
+
+        // ── Seccion cliente ────────────────────────────────
+        JLabel secCli = new JLabel("Datos del cliente");
+        secCli.setFont(new Font("Arial", Font.BOLD, 14)); secCli.setForeground(C[1]);
+        secCli.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+        secCli.setBorder(BorderFactory.createMatteBorder(0,0,1,0,C[9]));
+        form.add(secCli); form.add(Box.createVerticalStrut(12));
+
+        form.add(campLbl("Nombre del cliente *"));
+        JTextField tfNomCli = campo(); form.add(tfNomCli); form.add(Box.createVerticalStrut(10));
+
+        form.add(campLbl("Celular"));
+        JTextField tfCelular = campo(); form.add(tfCelular); form.add(Box.createVerticalStrut(10));
+
+        form.add(campLbl("Correo *"));
+        JTextField tfCorreo = campo(); form.add(tfCorreo); form.add(Box.createVerticalStrut(20));
+
+        // ── Seccion mascota ────────────────────────────────
+        JLabel secMas = new JLabel("Datos de la mascota");
+        secMas.setFont(new Font("Arial", Font.BOLD, 14)); secMas.setForeground(C[1]);
+        secMas.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+        secMas.setBorder(BorderFactory.createMatteBorder(0,0,1,0,C[9]));
+        form.add(secMas); form.add(Box.createVerticalStrut(12));
+
+        form.add(campLbl("Nombre de la mascota *"));
+        JTextField tfNomMas = campo(); form.add(tfNomMas); form.add(Box.createVerticalStrut(10));
+
+        form.add(campLbl("Especie *"));
+        List<Especies> especies = ctrl.listarEspecies();
+        JComboBox<Especies> cbEspecie = new JComboBox<>();
+        cbEspecie.addItem(null);
+        for (Especies esp : especies) cbEspecie.addItem(esp);
+        cbEspecie.setRenderer(new DefaultListCellRenderer() {
+            public java.awt.Component getListCellRendererComponent(JList<?> l, Object v, int i, boolean s, boolean f) {
+                super.getListCellRendererComponent(l, v, i, s, f);
+                setText(v instanceof Especies ? ((Especies)v).getNombre() : "Selecciona una especie...");
+                setBackground(s?C[3]:C[2]); setForeground(C[6]); return this;
+            }
+        });
+        estilizarCombo(cbEspecie); form.add(cbEspecie); form.add(Box.createVerticalStrut(10));
+
+        form.add(campLbl("Fecha de nacimiento (opcional)"));
+        JDateChooser dcFechaMas = new JDateChooser();
+        dcFechaMas.setDateFormatString("yyyy-MM-dd");
+        dcFechaMas.setFont(new Font("Arial", Font.PLAIN, 13));
+        dcFechaMas.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        dcFechaMas.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+        form.add(dcFechaMas); form.add(Box.createVerticalStrut(10));
+
+        form.add(campLbl("Sexo"));
+        JComboBox<String> cbSexo = new JComboBox<>(new String[]{"", "Macho", "Hembra"});
+        estilizarCombo(cbSexo); form.add(cbSexo); form.add(Box.createVerticalStrut(10));
+
+        form.add(campLbl("Característica diferenciadora (opcional)"));
+        JTextField tfCar = campo();
+        tfCar.setToolTipText("Ej: collar rojo, pelaje negro...");
+        form.add(tfCar); form.add(Box.createVerticalStrut(18));
+
+        // ── Botones ────────────────────────────────────────
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        btnRow.setBackground(C[2]); btnRow.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+
+        JButton btnCancel = new JButton("Cancelar");
+        btnCancel.setBackground(C[0]); btnCancel.setForeground(C[6]);
+        btnCancel.setFont(new Font("Arial", Font.PLAIN, 13)); btnCancel.setOpaque(true);
+        btnCancel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(C[9],1), BorderFactory.createEmptyBorder(8,16,8,16)));
+        btnCancel.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { dlg.dispose(); }
+        });
+
+        JButton btnGuardar = new JButton("Registrar cliente y mascota");
+        btnGuardar.setBackground(new Color(22,163,74)); btnGuardar.setForeground(Color.WHITE);
+        btnGuardar.setFont(new Font("Arial", Font.BOLD, 13)); btnGuardar.setOpaque(true);
+        btnGuardar.setBorderPainted(false);
+        btnGuardar.setBorder(BorderFactory.createEmptyBorder(8,18,8,18));
+        btnGuardar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Deshabilitar para evitar doble clic
+                btnGuardar.setEnabled(false);
+                try {
+                    String nomCli  = tfNomCli.getText().trim();
+                    String nomMas  = tfNomMas.getText().trim();
+                    String correo  = tfCorreo.getText().trim().toLowerCase();
+                    Especies esp   = cbEspecie.getSelectedItem() instanceof Especies
+                            ? (Especies) cbEspecie.getSelectedItem() : null;
+
+                    if (nomCli.isEmpty()) throw new Exception("El nombre del cliente es obligatorio.");
+                    if (correo.isEmpty() || !correo.contains("@")) throw new Exception("El correo es obligatorio y debe ser valido.");
+                    if (nomMas.isEmpty()) throw new Exception("El nombre de la mascota es obligatorio.");
+                    if (esp == null) throw new Exception("Selecciona una especie.");
+
+                    // Verificar que el correo no este ya registrado
+                    if (Cliente.buscarPorCorreoBD(correo) != null)
+                        throw new Exception("Ya existe un cliente con ese correo: " + correo);
+
+                    // 1. Crear cliente
+                    Cliente nuevo = new Cliente();
+                    nuevo.setNombre(nomCli);
+                    nuevo.setTelefono(tfCelular.getText().trim().isEmpty() ? null : tfCelular.getText().trim());
+                    nuevo.setCorreo(correo);
+                    nuevo.setContrasena("kamp" + java.util.UUID.randomUUID().toString().substring(0, 6));
+                    nuevo.setFechaRegistro(java.time.LocalDate.now());
+                    nuevo.insertarBD();
+
+                    // Recuperar por correo (unico) para obtener el ID correcto
+                    Cliente guardado = Cliente.buscarPorCorreoBD(correo);
+                    if (guardado == null) throw new Exception("No se pudo recuperar el cliente creado.");
+
+                    // 2. Registrar mascota — fecha desde JDateChooser
+                    String sexo    = (String) cbSexo.getSelectedItem();
+                    String fechaStr = "";
+                    if (dcFechaMas.getDate() != null) {
+                        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
+                        fechaStr = sdf.format(dcFechaMas.getDate());
+                    }
+                    boolean ok = ctrl.registrarMascota(
+                            nomMas, esp, guardado,
+                            fechaStr, (sexo==null||sexo.isBlank())?null:sexo,
+                            tfCar.getText(), form, null);
+                    if (ok) {
+                        dlg.dispose();
+                        recargar();
+                        JOptionPane.showMessageDialog(panel,
+                                "Cliente \"" + nomCli + "\" y mascota \"" + nomMas + "\" registrados correctamente.\n" +
+                                "Contrasena generada: puede iniciar sesion con su correo.",
+                                "Registro exitoso", JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        btnGuardar.setEnabled(true);
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(dlg, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    btnGuardar.setEnabled(true);
+                }
+            }
+        });
+
+        btnRow.add(btnCancel); btnRow.add(btnGuardar);
+        form.add(btnRow);
+
+        JScrollPane scroll = new JScrollPane(form);
+        scroll.setBorder(null); scroll.getViewport().setBackground(C[2]);
         dlg.add(scroll);
         dlg.setVisible(true);
     }

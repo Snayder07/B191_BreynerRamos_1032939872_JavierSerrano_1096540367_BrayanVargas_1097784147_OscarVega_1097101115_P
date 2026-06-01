@@ -1,0 +1,458 @@
+@startuml Kampets_DiagramaClases
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 12
+skinparam classFontName Arial
+skinparam classHeaderBackgroundColor #d4edda
+skinparam classBorderColor #166534
+skinparam packageBorderColor #166534
+skinparam packageFontColor #166534
+skinparam packageFontSize 13
+skinparam ArrowColor #166534
+skinparam linetype ortho
+
+' ══════════════════════════════════════════
+'  PAQUETE: util
+' ══════════════════════════════════════════
+package "util" {
+
+    class ConexionBD {
+        - url       : String
+        - user      : String
+        - pass      : String
+        - connection       : Connection
+        - stmtConsulta     : Statement
+        + ConexionBD()
+        + getConnection()         : Connection
+        + insertarBD(sql : String)  : boolean
+        + consultarBD(sql : String) : ResultSet
+        + actualizarBD(sql : String): boolean
+        + borrarBD(sql : String)    : boolean
+        + setAutoCommitBD(val : boolean) : boolean
+        + commitBD()    : boolean
+        + rollbackBD()  : boolean
+        + cerrarConexion() : void
+    }
+}
+
+' ══════════════════════════════════════════
+'  PAQUETE: model
+' ══════════════════════════════════════════
+package "model" {
+
+    interface Persistible <<interface>> {
+        + insertarBD()  : boolean
+        + actualizarBD(): boolean
+        + eliminarBD()  : boolean
+    }
+
+    enum EstadoCita <<enumeration>> {
+        PENDIENTE
+        CONFIRMADA
+        CANCELADA
+        COMPLETADA
+    }
+
+    abstract class Persona <<abstract>> {
+        # nombre   : String
+        # telefono : String
+        # correo   : String
+        + getNombre()   : String
+        + getTelefono() : String
+        + getCorreo()   : String
+        + setNombre(n : String)   : void
+        + setTelefono(t : String) : void
+        + setCorreo(c : String)   : void
+    }
+
+    class Cliente {
+        - id             : Integer
+        - direccion      : String
+        - contrasena     : String
+        - fechaRegistro  : LocalDate
+        + getId()           : Integer
+        + getDireccion()    : String
+        + getContrasena()   : String
+        + setContrasena(c : String) : void
+        + insertarBD()      : boolean
+        + actualizarBD()    : boolean
+        + eliminarBD()      : boolean
+        + {static} consultarTodosBD()         : List<Cliente>
+        + {static} buscarPorCorreoBD(correo : String) : Cliente
+        + {static} buscarPorIdBD(id : int)    : Cliente
+    }
+
+    class Empleados {
+        - id         : Integer
+        - apellido   : String
+        - cargo      : String
+        - contrasena : String
+        + getId()        : Integer
+        + getNombre()    : String
+        + getApellido()  : String
+        + getCargo()     : String
+        + insertarBD()   : boolean
+        + actualizarBD() : boolean
+        + eliminarBD()   : boolean
+        + {static} consultarTodosBD()              : List<Empleados>
+        + {static} buscarPorCorreoBD(correo : String) : Empleados
+    }
+
+    class Especies {
+        - id     : Integer
+        - nombre : String
+        + getId()     : Integer
+        + getNombre() : String
+        + insertarBD() : boolean
+        + {static} consultarTodosBD()                : List<Especies>
+        + {static} buscarPorNombreBD(nombre : String): Especies
+        + {static} buscarPorIdBD(id : int)           : Especies
+    }
+
+    class Mascotas {
+        - id             : Integer
+        - nombre         : String
+        - sexo           : String
+        - caracteristica : String
+        - fechaNac       : LocalDate
+        - cliente        : Cliente
+        - especie        : Especies
+        + getId()      : Integer
+        + getNombre()  : String
+        + getCliente() : Cliente
+        + getEspecie() : Especies
+        + getEtiqueta(): String
+        + insertarBD()   : boolean
+        + actualizarBD() : boolean
+        + eliminarBD()   : boolean
+        + {static} consultarTodosBD()              : List<Mascotas>
+        + {static} consultarPorClienteBD(id : int) : List<Mascotas>
+        + {static} buscarPorIdBD(id : Integer)     : Mascotas
+    }
+
+    class Vacunas {
+        - id     : Integer
+        - nombre : String
+        + getId()     : Integer
+        + getNombre() : String
+        + {static} consultarTodosBD() : List<Vacunas>
+    }
+
+    class Servicio {
+        - id     : Integer
+        - nombre : String
+        - precio : BigDecimal
+        + getId()     : Integer
+        + getNombre() : String
+        + getPrecio() : BigDecimal
+        + {static} consultarTodosBD() : List<Servicio>
+    }
+
+    class Citas {
+        - id                 : Integer
+        - fechaCita          : LocalDate
+        - horaCita           : LocalTime
+        - estadoCita         : EstadoCita
+        - motivo             : String
+        - direccionDomicilio : String
+        - mascota            : Mascotas
+        - empleado           : Empleados
+        + getId()         : Integer
+        + getFechaCita()  : LocalDate
+        + getHoraCita()   : LocalTime
+        + getEstadoCita() : EstadoCita
+        + getMotivo()     : String
+        + getMascota()    : Mascotas
+        + getEmpleado()   : Empleados
+        + insertarBD()    : boolean
+        + actualizarBD()  : boolean
+        + eliminarBD()    : boolean
+        + {static} actualizarEstadoBD(id : Integer, e : EstadoCita) : boolean
+        + {static} consultarTodosBD()                : List<Citas>
+        + {static} consultarPorClienteBD(id : int)   : List<Citas>
+        + {static} consultarPasadasPorClienteBD(id : int) : List<Citas>
+        + {static} consultarDeHoyBD()                : List<Citas>
+        + {static} consultarVacunasBD()              : List<Citas>
+        + {static} buscarPorIdBD(id : Integer)       : Citas
+    }
+
+    class Cita_servicio {
+        - id       : Integer
+        - cita     : Citas
+        - servicio : Servicio
+        + getId()      : Integer
+        + getCita()    : Citas
+        + getServicio(): Servicio
+        + insertarBD() : boolean
+        + {static} consultarPorCitaBD(citaId : int) : List<Cita_servicio>
+    }
+
+    class Control_vacunas {
+        - id              : Integer
+        - fechaAplicacion : LocalDate
+        - proximaDosis    : LocalDate
+        - mascota         : Mascotas
+        - vacuna          : Vacunas
+        + getId()              : Integer
+        + getFechaAplicacion() : LocalDate
+        + getProximaDosis()    : LocalDate
+        + getMascota()         : Mascotas
+        + getVacuna()          : Vacunas
+        + getEstado()          : String
+        + insertarBD()         : boolean
+        + actualizarBD()       : boolean
+        + eliminarBD()         : boolean
+        + {static} consultarTodosBD()              : List<Control_vacunas>
+        + {static} consultarPorClienteBD(id : int) : List<Control_vacunas>
+    }
+
+    class Productos {
+        - id     : Integer
+        - nombre : String
+        - tipo   : String
+        - marca  : String
+        - precio : BigDecimal
+        - stock  : Integer
+        - foto   : byte[]
+        + getId()     : Integer
+        + getNombre() : String
+        + getPrecio() : BigDecimal
+        + getStock()  : Integer
+        + insertarBD()   : boolean
+        + actualizarBD() : boolean
+        + eliminarBD()   : boolean
+        + {static} consultarTodosBD() : List<Productos>
+    }
+}
+
+' ══════════════════════════════════════════
+'  PAQUETE: service
+' ══════════════════════════════════════════
+package "service" {
+
+    class ClienteService {
+        + registrar(nombre : String, correo : String,\n  pass : String, passConf : String) : void
+    }
+
+    class CorreoService {
+        + {static} enviarCorreoGeneral(dest : String,\n  nombre : String, asunto : String,\n  cuerpo : String) : void
+    }
+
+    class RecuperacionService {
+        + generarCodigo(correo : String) : boolean
+        + validarCodigo(correo : String,\n  codigo : String) : boolean
+        + cambiarContrasena(correo : String,\n  nueva : String) : boolean
+    }
+}
+
+' ══════════════════════════════════════════
+'  PAQUETE: controller
+' ══════════════════════════════════════════
+package "controller" {
+
+    class LoginController {
+        + loginCliente(correo : String, pass : String)   : Cliente
+        + loginEmpleado(correo : String, pass : String)  : Empleados
+    }
+
+    class RegistroController {
+        - clienteService : ClienteService
+        + registrar(nombre : String, correo : String,\n  pass : String, passConf : String) : boolean
+    }
+
+    class CitaAdminController {
+        + listarTodas()                  : List<Citas>
+        + listarPorCliente(id : Integer) : List<Citas>
+        + listarDeHoy()                  : List<Citas>
+        + listarCitasVacunas()           : List<Citas>
+        + confirmarCita(id : Integer, panel : JPanel) : void
+        + cancelarCita(id : Integer, panel : JPanel)  : void
+        + cambiarEstado(id : Integer,\n  estado : EstadoCita, panel : JPanel) : void
+        + guardarCita(mascota : Mascotas,\n  empleado : Empleados, fechaStr : String,\n  horaStr : String, estadoStr : String,\n  panel : JPanel) : boolean
+    }
+
+    class AgendarCitaController {
+        + listarMascotas()    : List<Mascotas>
+        + listarServicios()   : List<Servicio>
+        + listarVeterinarios(): List<Empleados>
+        + guardarCita(mascota : Mascotas,\n  empleado : Empleados, fechaStr : String,\n  horaStr : String, direccion : String,\n  motivo : String, panel : JPanel) : boolean
+    }
+
+    class MascotaAdminController {
+        + listarTodas()    : List<Mascotas>
+        + listarEspecies() : List<Especies>
+        + listarClientes() : List<Cliente>
+        + registrarMascota(nombre : String,\n  especie : Especies, cliente : Cliente,\n  fechaNacStr : String, sexo : String,\n  car : String, panel : JPanel) : boolean
+        + actualizarMascota(mascota : Mascotas,\n  nombre : String, especie : Especies,\n  fecha : LocalDate, sexo : String,\n  panel : JPanel) : void
+        + eliminarMascota(id : Integer, panel : JPanel) : void
+    }
+
+    class InventarioController {
+        + listarTodos()    : List<Productos>
+        + agregarProducto(nombre : String,\n  tipo : String, marca : String,\n  precio : String, stock : String,\n  foto : byte[], panel : JPanel) : boolean
+        + actualizarProducto(p : Productos,\n  panel : JPanel) : boolean
+        + eliminarProducto(id : Integer, panel : JPanel) : void
+    }
+
+    class VacunaAdminController {
+        + listarTodas()   : List<Control_vacunas>
+        + listarMascotas(): List<Mascotas>
+        + listarVacunas() : List<Vacunas>
+        + guardar(cv : Control_vacunas)   : void
+        + actualizar(cv : Control_vacunas): void
+        + eliminar(id : Integer)          : void
+    }
+}
+
+' ══════════════════════════════════════════
+'  PAQUETE: view
+' ══════════════════════════════════════════
+package "view" {
+
+    class Main {
+        + {static} clienteActual  : Cliente
+        + {static} empleadoActual : Empleados
+        + {static} main(args : String[]) : void
+    }
+
+    class PanelAdmin {
+        + panel : JPanel
+        - citaCtrl   : CitaAdminController
+        - vacunaCtrl : VacunaAdminController
+        + PanelAdmin()
+        + setTema(oscuro : boolean) : void
+        + recargar() : void
+    }
+
+    class PanelCliente {
+        + panel : JPanel
+        - ctrl  : CitaAdminController
+        + PanelCliente()
+        + setTema(oscuro : boolean) : void
+        + recargar() : void
+    }
+
+    class PanelCalendario {
+        + panel : JPanel
+        + PanelCalendario()
+        + setTema(oscuro : boolean) : void
+        + recargar() : void
+    }
+
+    class PanelAdminCitas {
+        + panel : JPanel
+        - ctrl  : CitaAdminController
+        + PanelAdminCitas()
+        + recargar() : void
+    }
+
+    class PanelAdminMascotas {
+        + panel : JPanel
+        - ctrl  : MascotaAdminController
+        + PanelAdminMascotas()
+        + recargar() : void
+    }
+
+    class PanelAdminInventario {
+        + panel : JPanel
+        - ctrl  : InventarioController
+        + PanelAdminInventario()
+        + recargar() : void
+    }
+
+    class PanelAdminVacunas {
+        + panel : JPanel
+        - ctrl  : VacunaAdminController
+        + PanelAdminVacunas()
+        + recargar() : void
+    }
+
+    class PanelAgendarCita {
+        + panel : JPanel
+        - ctrl  : AgendarCitaController
+        + PanelAgendarCita()
+    }
+}
+
+' ══════════════════════════════════════════
+'  RELACIONES
+' ══════════════════════════════════════════
+
+' --- Herencia (inheritance) ---
+Persona      <|-- Cliente
+Persona      <|-- Empleados
+
+' --- Interface (realization) ---
+Persistible  <|.. Cliente
+Persistible  <|.. Empleados
+Persistible  <|.. Mascotas
+Persistible  <|.. Citas
+Persistible  <|.. Control_vacunas
+Persistible  <|.. Productos
+
+' --- Enumeracion usada por Citas ---
+Citas ..> EstadoCita
+
+' --- Composicion (◆): Citas es el TODO, Cita_servicio no existe sin ella ---
+Citas "1" *-- "0..*" Cita_servicio : contiene >
+
+' --- Agregacion (◇): las partes existen independientemente ---
+Mascotas     "0..*" o-- "1" Cliente   : pertenece a >
+Mascotas     "0..*" o-- "1" Especies  : es de >
+Citas        "0..*" o-- "1" Mascotas  : es de >
+Citas        "0..*" o-- "1" Empleados : atendida por >
+Control_vacunas "0..*" o-- "1" Mascotas : registrada para >
+Control_vacunas "0..*" o-- "1" Vacunas  : tipo >
+Cita_servicio   "0..*" o-- "1" Servicio : de tipo >
+
+' --- Dependencia modelo -> ConexionBD ---
+Cliente         ..> ConexionBD
+Empleados       ..> ConexionBD
+Mascotas        ..> ConexionBD
+Citas           ..> ConexionBD
+Productos       ..> ConexionBD
+Control_vacunas ..> ConexionBD
+Especies        ..> ConexionBD
+Vacunas         ..> ConexionBD
+Servicio        ..> ConexionBD
+Cita_servicio   ..> ConexionBD
+
+' --- Dependencia service -> model ---
+ClienteService     ..> Cliente
+RecuperacionService ..> Cliente
+RecuperacionService ..> Empleados
+
+' --- Dependencia controller -> model ---
+RegistroController   ..> ClienteService
+LoginController      ..> Cliente
+LoginController      ..> Empleados
+CitaAdminController  ..> Citas
+CitaAdminController  ..> Mascotas
+CitaAdminController  ..> Empleados
+AgendarCitaController ..> Citas
+AgendarCitaController ..> Mascotas
+AgendarCitaController ..> Servicio
+AgendarCitaController ..> Empleados
+MascotaAdminController ..> Mascotas
+MascotaAdminController ..> Especies
+MascotaAdminController ..> Cliente
+InventarioController   ..> Productos
+VacunaAdminController  ..> Control_vacunas
+VacunaAdminController  ..> Mascotas
+VacunaAdminController  ..> Vacunas
+
+' --- Dependencia view -> controller ---
+PanelAdmin         o-- CitaAdminController
+PanelAdmin         o-- VacunaAdminController
+PanelCliente       o-- CitaAdminController
+PanelAdminCitas    o-- CitaAdminController
+PanelAdminMascotas o-- MascotaAdminController
+PanelAdminInventario o-- InventarioController
+PanelAdminVacunas  o-- VacunaAdminController
+PanelAgendarCita   o-- AgendarCitaController
+
+' --- Main crea los paneles ---
+Main ..> PanelAdmin
+Main ..> PanelCliente
+
+@enduml

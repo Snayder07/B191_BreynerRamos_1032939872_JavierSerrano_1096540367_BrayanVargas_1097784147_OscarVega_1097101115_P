@@ -5,6 +5,7 @@ import org.example.controller.VacunaAdminController;
 import org.example.model.Cita_servicio;
 import org.example.model.Citas;
 import org.example.model.Control_vacunas;
+import org.example.model.Vacunas;
 import org.example.model.EstadoCita;
 import org.example.model.Vacunas;
 
@@ -16,11 +17,9 @@ import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class PanelAdminCitas {
     public JPanel panel;
-    private boolean temaOscuro = false;
     private String filtroActual = "Todas";
     private List<Citas> cachedTodas = null;
 
@@ -34,23 +33,15 @@ public class PanelAdminCitas {
             new Color(187,224,200), new Color(15,60,30),    new Color(134,190,155),
             new Color(220,38,38),   new Color(22,163,74),   new Color(210,240,220),
     };
-    private final Color[] OSCURO = {
-            new Color(18,24,38),  new Color(13,18,30),   new Color(26,34,52),
-            new Color(37,55,90),  new Color(32,42,64),   Color.WHITE,
-            new Color(226,232,240), new Color(148,163,184), new Color(251,146,60),
-            new Color(30,41,59),  new Color(9,14,24),    new Color(122,175,212),
-            new Color(239,68,68), new Color(34,197,94),  new Color(15,23,42),
-    };
     private Color[] C = CLARO;
 
     public PanelAdminCitas() { panel = new JPanel(new BorderLayout()); construir(); }
-    public void setTema(boolean o) { if (o != temaOscuro) { temaOscuro = o; construir(); } }
     public void recargar() { cachedTodas = null; construir(); }
 
     private void construir() {
-        panel.removeAll(); C = temaOscuro ? OSCURO : CLARO;
+        panel.removeAll(); C = CLARO;
         panel.setBackground(C[0]);
-        panel.add(SidebarAdmin.crear(C, temaOscuro, "adminCitas", panel), BorderLayout.WEST);
+        panel.add(SidebarAdmin.crear(C, "adminCitas", panel), BorderLayout.WEST);
 
         if (cachedTodas != null) {
             panel.add(crearContenido(), BorderLayout.CENTER);
@@ -113,10 +104,17 @@ public class PanelAdminCitas {
         btnNueva.setOpaque(true); btnNueva.setBorderPainted(false);
         btnNueva.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
         btnNueva.setBorder(BorderFactory.createEmptyBorder(9, 18, 9, 18));
-        btnNueva.addActionListener(ev -> {
-            NuevaCitaAdminDialog dlg = new NuevaCitaAdminDialog(SwingUtilities.getWindowAncestor(c));
-            dlg.setVisible(true);
-            if (dlg.fueGuardado()) { cachedTodas = null; construir(); }
+        btnNueva.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent ev) {
+                NuevaCitaAdminDialog dlg = new NuevaCitaAdminDialog(SwingUtilities.getWindowAncestor(c));
+                dlg.setVisible(true);
+                if (dlg.fueGuardado()) {
+                    cachedTodas = null;
+                    construir();
+                    Main.recargarPanelAdmin();
+                }
+            }
         });
         tr.add(btnNueva);
         tb.add(tl, BorderLayout.WEST);
@@ -242,10 +240,14 @@ public class PanelAdminCitas {
             if (cita.getMotivo() != null && !cita.getMotivo().isEmpty()) {
                 motivoText = cita.getMotivo();
             } else if (cita.getServicios() != null && !cita.getServicios().isEmpty()) {
-                motivoText = cita.getServicios().stream()
-                        .filter(cs -> cs.getServicio() != null)
-                        .map(cs -> cs.getServicio().getNombre())
-                        .collect(Collectors.joining(", "));
+                StringBuilder sbMotivo = new StringBuilder();
+                for (Cita_servicio cs : cita.getServicios()) {
+                    if (cs.getServicio() != null) {
+                        if (sbMotivo.length() > 0) sbMotivo.append(", ");
+                        sbMotivo.append(cs.getServicio().getNombre());
+                    }
+                }
+                motivoText = sbMotivo.toString();
                 if (motivoText.isEmpty()) motivoText = "-";
             }
             datos[i][2] = motivoText;
@@ -271,7 +273,7 @@ public class PanelAdminCitas {
         tabla.setSelectionBackground(C[3]); tabla.setFillsViewportHeight(true);
 
         JTableHeader th = tabla.getTableHeader();
-        th.setBackground(C[14]); th.setForeground(temaOscuro ? C[7] : C[1]);
+        th.setBackground(C[14]); th.setForeground(C[1]);
         th.setFont(new Font("Arial", Font.BOLD, 11));
         th.setReorderingAllowed(false); th.setPreferredSize(new Dimension(0, 36));
 
@@ -349,11 +351,33 @@ public class PanelAdminCitas {
         java.util.List<Vacunas> vacunas = vacunaCtrl.listarVacunas();
         if (vacunas.isEmpty()) return;
 
+        // Verificar si el cliente ya especifico una vacuna al agendar
+        Control_vacunas preRegistro = null;
+        if (cita.getMascota() != null && cita.getFechaCita() != null) {
+            for (Control_vacunas cv : vacunaCtrl.listarTodas()) {
+                if (cv.getMascota() != null
+                        && cv.getMascota().getId().equals(cita.getMascota().getId())
+                        && cita.getFechaCita().equals(cv.getFechaAplicacion())) {
+                    preRegistro = cv;
+                    break;
+                }
+            }
+        }
+        if (preRegistro != null) {
+            // Ya existe — informar al admin que el cliente ya especifico la vacuna
+            int resp = JOptionPane.showConfirmDialog(panel,
+                    "<html>El cliente ya indicó la vacuna: <b>" + preRegistro.getVacuna().getNombre() + "</b><br>" +
+                    "¿Deseas cambiarla o dejar la que el cliente eligio?</html>",
+                    "Vacuna preseleccionada por el cliente",
+                    JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE);
+            if (resp != JOptionPane.YES_OPTION) return; // dejar la que el cliente eligio
+        }
+
         Window owner = SwingUtilities.getWindowAncestor(panel);
         JDialog dialog = new JDialog(owner,
                 "Registrar vacuna para " + cita.getMascota().getNombre(),
                 Dialog.ModalityType.APPLICATION_MODAL);
-        dialog.setSize(480, 310);
+        dialog.setSize(480, 330);
         dialog.setLocationRelativeTo(panel);
         dialog.setResizable(false);
 
@@ -376,13 +400,37 @@ public class PanelAdminCitas {
                 return this;
             }
         });
+        // Pre-seleccionar si el cliente eligio una vacuna
+        final Control_vacunas preReg = preRegistro;
+        if (preReg != null) {
+            for (int i = 0; i < vacunas.size(); i++) {
+                if (vacunas.get(i).getId().equals(preReg.getVacuna().getId())) {
+                    cmbVacuna.setSelectedIndex(i); break;
+                }
+            }
+        }
+
+        // Banner informativo si el cliente eligio vacuna
+        int filaBase = 0;
+        if (preReg != null) {
+            gbc.gridx = 0; gbc.gridy = filaBase; gbc.gridwidth = 2; gbc.weightx = 1.0;
+            JLabel lClienteEligio = new JLabel("<html><b style='color:#15803d'>El cliente indicó: " +
+                    preReg.getVacuna().getNombre() + "</b> — puedes cambiarlo abajo.</html>");
+            lClienteEligio.setFont(new Font("Arial", Font.PLAIN, 11));
+            lClienteEligio.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(22, 163, 74), 1),
+                    BorderFactory.createEmptyBorder(6, 10, 6, 10)));
+            form.add(lClienteEligio, gbc);
+            gbc.gridwidth = 1;
+            filaBase = 1;
+        }
 
         Object[][] filas = {
             {"Mascota:",    new JLabel(nombreMascota)},
             {"Tipo de vacuna:", cmbVacuna},
         };
         for (int i = 0; i < filas.length; i++) {
-            gbc.gridx = 0; gbc.gridy = i; gbc.weightx = 0.3;
+            gbc.gridx = 0; gbc.gridy = filaBase + i; gbc.weightx = 0.3;
             JLabel lbl = new JLabel((String) filas[i][0]);
             lbl.setFont(new Font("Arial", Font.BOLD, 12)); lbl.setForeground(C[6]);
             form.add(lbl, gbc);
@@ -392,7 +440,7 @@ public class PanelAdminCitas {
             form.add(comp, gbc);
         }
 
-        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2; gbc.weightx = 1.0;
+        gbc.gridx = 0; gbc.gridy = filaBase + 2; gbc.gridwidth = 2; gbc.weightx = 1.0;
         JLabel info = new JLabel("<html><i>La vacuna quedará pendiente hasta que el cliente la reciba.</i></html>");
         info.setFont(new Font("Arial", Font.PLAIN, 11)); info.setForeground(C[7]);
         form.add(info, gbc);
@@ -404,30 +452,35 @@ public class PanelAdminCitas {
         btnOmitir.setForeground(C[6]); btnOmitir.setOpaque(true);
         btnOmitir.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(C[9], 1), BorderFactory.createEmptyBorder(7, 14, 7, 14)));
-        btnOmitir.addActionListener(ev -> dialog.dispose());
+        btnOmitir.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent ev) { dialog.dispose(); }
+        });
 
         JButton btnGuardar = new JButton("Registrar vacuna");
         btnGuardar.setFont(new Font("Arial", Font.BOLD, 13));
         btnGuardar.setBackground(new Color(22, 163, 74)); btnGuardar.setForeground(Color.WHITE);
         btnGuardar.setOpaque(true); btnGuardar.setBorderPainted(false);
         btnGuardar.setBorder(BorderFactory.createEmptyBorder(9, 18, 9, 18));
-        btnGuardar.addActionListener(ev -> {
-            Vacunas vacSel = (Vacunas) cmbVacuna.getSelectedItem();
-            if (vacSel == null) { JOptionPane.showMessageDialog(dialog, "Selecciona una vacuna."); return; }
-            Control_vacunas cv = new Control_vacunas();
-            cv.setMascota(cita.getMascota());
-            cv.setVacuna(vacSel);
-            // Fecha de aplicacion = fecha de la cita (queda pendiente si es futura)
-            cv.setFechaAplicacion(cita.getFechaCita());
-            cv.setProximaDosis(null);
-            try {
-                vacunaCtrl.guardar(cv);
-                JOptionPane.showMessageDialog(dialog,
-                        "Vacuna registrada. Aparecerá como Pendiente hasta que el cliente sea atendido.",
-                        "Vacuna registrada", JOptionPane.INFORMATION_MESSAGE);
-                dialog.dispose();
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(dialog, "Error al registrar: " + ex.getMessage());
+        btnGuardar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent ev) {
+                Vacunas vacSel = (Vacunas) cmbVacuna.getSelectedItem();
+                if (vacSel == null) { JOptionPane.showMessageDialog(dialog, "Selecciona una vacuna."); return; }
+                Control_vacunas cv = new Control_vacunas();
+                cv.setMascota(cita.getMascota());
+                cv.setVacuna(vacSel);
+                cv.setFechaAplicacion(cita.getFechaCita());
+                cv.setProximaDosis(null);
+                try {
+                    vacunaCtrl.guardar(cv);
+                    JOptionPane.showMessageDialog(dialog,
+                            "Vacuna registrada. Aparecerá como Pendiente hasta que el cliente sea atendido.",
+                            "Vacuna registrada", JOptionPane.INFORMATION_MESSAGE);
+                    dialog.dispose();
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(dialog, "Error al registrar: " + ex.getMessage());
+                }
             }
         });
         btns.add(btnOmitir); btns.add(btnGuardar);
@@ -518,54 +571,61 @@ public class PanelAdminCitas {
             btnCancelar.setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 10));
             btnCancelar.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-            btnConfirmar.addActionListener(e -> {
-                fireEditingStopped();
-                if (filaActual < 0 || filaActual >= citas.size()) return;
-                Citas cita = citas.get(filaActual);
-                if (cita.getId() == null) return;
+            btnConfirmar.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    fireEditingStopped();
+                    if (filaActual < 0 || filaActual >= citas.size()) return;
+                    Citas cita = citas.get(filaActual);
+                    if (cita.getId() == null) return;
 
-                int respuesta = JOptionPane.showConfirmDialog(panel,
-                        "¿Confirmar la cita de " +
-                                (cita.getMascota() != null ? cita.getMascota().getNombre() : "esta mascota") +
-                                " el " + cita.getFechaCita() + " a las " + cita.getHoraCita() + "?\n" +
-                                "Se enviará un correo de confirmación al cliente.",
-                        "Confirmar cita", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+                    int respuesta = JOptionPane.showConfirmDialog(panel,
+                            "¿Confirmar la cita de " +
+                                    (cita.getMascota() != null ? cita.getMascota().getNombre() : "esta mascota") +
+                                    " el " + cita.getFechaCita() + " a las " + cita.getHoraCita() + "?\n" +
+                                    "Se enviará un correo de confirmación al cliente.",
+                            "Confirmar cita", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 
-                if (respuesta == JOptionPane.YES_OPTION) {
-                    ctrl.confirmarCita(cita.getId(), panel);
-                    cachedTodas = null; construir();
-                    // Si es cita de vacunación, ofrecer registro de vacuna
-                    boolean esVacunacion = (cita.getMotivo() != null &&
-                            cita.getMotivo().toLowerCase().contains("vacun"));
-                    if (!esVacunacion && cita.getServicios() != null) {
-                        for (Cita_servicio cs : cita.getServicios()) {
-                            if (cs.getServicio() != null &&
-                                    cs.getServicio().getNombre().toLowerCase().contains("vacun")) {
-                                esVacunacion = true; break;
+                    if (respuesta == JOptionPane.YES_OPTION) {
+                        ctrl.confirmarCita(cita.getId(), panel);
+                        cachedTodas = null; construir();
+                        Main.recargarPanelAdmin();
+                        boolean esVacunacion = (cita.getMotivo() != null &&
+                                cita.getMotivo().toLowerCase().contains("vacun"));
+                        if (!esVacunacion && cita.getServicios() != null) {
+                            for (Cita_servicio cs : cita.getServicios()) {
+                                if (cs.getServicio() != null &&
+                                        cs.getServicio().getNombre().toLowerCase().contains("vacun")) {
+                                    esVacunacion = true; break;
+                                }
                             }
                         }
-                    }
-                    if (esVacunacion && cita.getMascota() != null) {
-                        abrirDialogoRegistrarVacuna(cita);
+                        if (esVacunacion && cita.getMascota() != null) {
+                            abrirDialogoRegistrarVacuna(cita);
+                        }
                     }
                 }
             });
 
-            btnCancelar.addActionListener(e -> {
-                fireEditingStopped();
-                if (filaActual < 0 || filaActual >= citas.size()) return;
-                Citas cita = citas.get(filaActual);
-                if (cita.getId() == null) return;
+            btnCancelar.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    fireEditingStopped();
+                    if (filaActual < 0 || filaActual >= citas.size()) return;
+                    Citas cita = citas.get(filaActual);
+                    if (cita.getId() == null) return;
 
-                int respuesta = JOptionPane.showConfirmDialog(panel,
-                        "¿Cancelar la cita de " +
-                                (cita.getMascota() != null ? cita.getMascota().getNombre() : "esta mascota") +
-                                " el " + cita.getFechaCita() + " a las " + cita.getHoraCita() + "?",
-                        "Cancelar cita", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                    int respuesta = JOptionPane.showConfirmDialog(panel,
+                            "¿Cancelar la cita de " +
+                                    (cita.getMascota() != null ? cita.getMascota().getNombre() : "esta mascota") +
+                                    " el " + cita.getFechaCita() + " a las " + cita.getHoraCita() + "?",
+                            "Cancelar cita", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 
-                if (respuesta == JOptionPane.YES_OPTION) {
-                    ctrl.cancelarCita(cita.getId(), panel);
-                    cachedTodas = null; construir();
+                    if (respuesta == JOptionPane.YES_OPTION) {
+                        ctrl.cancelarCita(cita.getId(), panel);
+                        cachedTodas = null; construir();
+                        Main.recargarPanelAdmin();
+                    }
                 }
             });
         }

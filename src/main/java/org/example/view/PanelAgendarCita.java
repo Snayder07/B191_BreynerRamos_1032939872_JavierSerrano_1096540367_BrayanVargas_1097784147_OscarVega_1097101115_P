@@ -2,9 +2,12 @@ package org.example.view;
 
 import com.toedter.calendar.JDateChooser;
 import org.example.controller.AgendarCitaController;
+import org.example.controller.VacunaAdminController;
+import org.example.model.Control_vacunas;
 import org.example.model.Empleados;
 import org.example.model.Mascotas;
 import org.example.model.Servicio;
+import org.example.model.Vacunas;
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
@@ -16,7 +19,6 @@ import java.util.List;
 
 public class PanelAgendarCita {
     public JPanel panel;
-    private boolean temaOscuro = false;
 
     private final AgendarCitaController ctrl = new AgendarCitaController();
 
@@ -27,13 +29,6 @@ public class PanelAgendarCita {
             new Color(208, 228, 244), new Color(15,  53,   96), new Color(122, 175, 212),
             new Color(168, 200, 232), new Color(168, 212, 245),
     };
-    private final Color[] OSCURO = {
-            new Color(18,  24,  38),  new Color(13,  18,  30),  new Color(26,  34,  52),
-            new Color(37,  55,  90),  new Color(32,  42,  64),  Color.WHITE,
-            new Color(226, 232, 240), new Color(100, 116, 139), new Color(251, 146,  60),
-            new Color(30,  41,  59),  new Color(9,   14,  24),  new Color(122, 175, 212),
-            new Color(80,  120, 170), new Color(100, 160, 210),
-    };
     private Color[] C = CLARO;
 
     public PanelAgendarCita() {
@@ -41,15 +36,11 @@ public class PanelAgendarCita {
         construir();
     }
 
-    public void setTema(boolean oscuro) {
-        if (oscuro != temaOscuro) { temaOscuro = oscuro; construir(); }
-    }
-
     public void recargar() { construir(); }
 
     private void construir() {
         panel.removeAll();
-        C = temaOscuro ? OSCURO : CLARO;
+        C = CLARO;
         panel.setBackground(C[0]);
         panel.add(crearSidebar(),   BorderLayout.WEST);
         panel.add(crearContenido(), BorderLayout.CENTER);
@@ -267,6 +258,55 @@ public class PanelAgendarCita {
         cbServicio.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
         form.add(cbServicio); form.add(Box.createVerticalStrut(16));
 
+        // ── Panel vacuna (aparece solo si el servicio es vacunacion) ──
+        List<Vacunas> listaVacunas = new VacunaAdminController().listarVacunas();
+        JPanel panelVacuna = new JPanel();
+        panelVacuna.setLayout(new BoxLayout(panelVacuna, BoxLayout.Y_AXIS));
+        panelVacuna.setBackground(C[2]);
+        panelVacuna.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panelVacuna.setVisible(false);
+
+        JLabel lblVacuna = lbl("¿Sabes qué vacuna necesita tu mascota? (opcional)", 12, Font.BOLD, C[6]);
+        lblVacuna.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel subVacuna = lbl("Si no sabes, el veterinario la asignara al atenderte.", 11, Font.PLAIN, C[7]);
+        subVacuna.setAlignmentX(Component.LEFT_ALIGNMENT);
+        subVacuna.setBorder(BorderFactory.createEmptyBorder(0, 0, 6, 0));
+
+        JComboBox<Object> cbVacuna = new JComboBox<>();
+        cbVacuna.addItem("El veterinario decide");
+        for (Vacunas v : listaVacunas) cbVacuna.addItem(v);
+        cbVacuna.setRenderer(new DefaultListCellRenderer() {
+            public Component getListCellRendererComponent(JList<?> list, Object value,
+                    int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof Vacunas) setText(((Vacunas) value).getNombre());
+                return this;
+            }
+        });
+        cbVacuna.setFont(new Font("Arial", Font.PLAIN, 13));
+        cbVacuna.setBackground(C[2]); cbVacuna.setForeground(C[6]);
+        cbVacuna.setBorder(BorderFactory.createLineBorder(C[9], 1));
+        cbVacuna.setAlignmentX(Component.LEFT_ALIGNMENT);
+        cbVacuna.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
+
+        panelVacuna.add(lblVacuna);
+        panelVacuna.add(Box.createVerticalStrut(4));
+        panelVacuna.add(subVacuna);
+        panelVacuna.add(cbVacuna);
+        form.add(panelVacuna); form.add(Box.createVerticalStrut(8));
+
+        // Mostrar/ocultar segun servicio seleccionado
+        cbServicio.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                Object sel = cbServicio.getSelectedItem();
+                boolean esVacunacion = sel instanceof Servicio &&
+                        ((Servicio) sel).getNombre().toLowerCase().contains("vacun");
+                panelVacuna.setVisible(esVacunacion);
+                if (!esVacunacion) cbVacuna.setSelectedIndex(0);
+                form.revalidate(); form.repaint();
+            }
+        });
+
         // ── Fecha con JDateChooser y Hora ─────────────────
         JPanel filaFechaHora = new JPanel(new GridLayout(1, 2, 16, 0));
         filaFechaHora.setBackground(C[2]); filaFechaHora.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -284,16 +324,19 @@ public class PanelAgendarCita {
         colFecha.add(dateChooser);
 
         // Bloquear domingos: avisar inmediatamente al seleccionar
-        dateChooser.addPropertyChangeListener("date", evt -> {
-            java.util.Date selDate = dateChooser.getDate();
-            if (selDate != null) {
-                java.util.Calendar cal = java.util.Calendar.getInstance();
-                cal.setTime(selDate);
-                if (cal.get(java.util.Calendar.DAY_OF_WEEK) == java.util.Calendar.SUNDAY) {
-                    JOptionPane.showMessageDialog(panel,
-                            "Los domingos no están disponibles para citas.\nPor favor selecciona otro día (lunes a sábado).",
-                            "Día no disponible", JOptionPane.WARNING_MESSAGE);
-                    dateChooser.setDate(null);
+        dateChooser.addPropertyChangeListener("date", new java.beans.PropertyChangeListener() {
+            @Override
+            public void propertyChange(java.beans.PropertyChangeEvent evt) {
+                java.util.Date selDate = dateChooser.getDate();
+                if (selDate != null) {
+                    java.util.Calendar cal = java.util.Calendar.getInstance();
+                    cal.setTime(selDate);
+                    if (cal.get(java.util.Calendar.DAY_OF_WEEK) == java.util.Calendar.SUNDAY) {
+                        JOptionPane.showMessageDialog(panel,
+                                "Los domingos no están disponibles para citas.\nPor favor selecciona otro día (lunes a sábado).",
+                                "Día no disponible", JOptionPane.WARNING_MESSAGE);
+                        dateChooser.setDate(null);
+                    }
                 }
             }
         });
@@ -301,8 +344,14 @@ public class PanelAgendarCita {
         JPanel colHora = new JPanel(); colHora.setLayout(new BoxLayout(colHora, BoxLayout.Y_AXIS));
         colHora.setBackground(C[2]);
         agregarCampoLabel(colHora, "Hora");
-        String[] horas = {"Selecciona hora...","08:00","08:30","09:00","09:30",
-                "10:00","10:30","11:00","11:30","14:00","14:30","15:00","15:30","16:00","16:30"};
+        java.util.List<String> listaHorasAg = new java.util.ArrayList<>();
+        listaHorasAg.add("Selecciona hora...");
+        for (int h = 7; h < 20; h++) {
+            for (int m = 0; m < 60; m += 30) {
+                listaHorasAg.add(String.format("%02d:%02d", h, m));
+            }
+        }
+        String[] horas = listaHorasAg.toArray(new String[0]);
         JComboBox<String> cbHora = new JComboBox<>(horas);
         cbHora.setFont(new Font("Arial", Font.PLAIN, 13));
         cbHora.setBackground(C[2]); cbHora.setForeground(C[6]);
@@ -430,7 +479,21 @@ public class PanelAgendarCita {
                         ? (Servicio) cbServicio.getSelectedItem() : null;
                 String motivoStr = servicioSel != null ? servicioSel.getNombre() : null;
                 boolean ok = ctrl.guardarCita(mascota, empleado, fechaStr, hora, domicilio, motivoStr, panel);
-                if (ok) Main.cambiarPantalla("misCitas");
+                if (ok) {
+                    // Si el cliente especifico una vacuna, registrarla como pendiente
+                    if (cbVacuna.getSelectedItem() instanceof Vacunas && panelVacuna.isVisible()) {
+                        try {
+                            Control_vacunas cv = new Control_vacunas();
+                            cv.setMascota(mascota);
+                            cv.setVacuna((Vacunas) cbVacuna.getSelectedItem());
+                            cv.setFechaAplicacion(LocalDate.parse(fechaStr));
+                            cv.insertarBD();
+                        } catch (Exception ex) {
+                            // No bloquear si falla el registro de vacuna
+                        }
+                    }
+                    Main.cambiarPantalla("misCitas");
+                }
             }
         });
 

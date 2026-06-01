@@ -25,7 +25,6 @@ import java.util.Locale;
 
 public class PanelAdmin {
     public JPanel panel;
-    private boolean temaOscuro = false;
 
     private final CitaAdminController    citaCtrl         = new CitaAdminController();
     private final VacunaAdminController  vacunaCtrl       = new VacunaAdminController();
@@ -40,23 +39,16 @@ public class PanelAdmin {
             new Color(187,224,200), new Color(15,60,30),    new Color(134,190,155),
             new Color(220,38,38),   new Color(22,163,74),   new Color(210,240,220),
     };
-    private final Color[] OSCURO = {
-            new Color(18,24,38),    new Color(13,18,30),   new Color(26,34,52),
-            new Color(37,55,90),    new Color(32,42,64),   Color.WHITE,
-            new Color(226,232,240), new Color(148,163,184),new Color(251,146,60),
-            new Color(30,41,59),    new Color(9,14,24),    new Color(122,175,212),
-            new Color(239,68,68),   new Color(34,197,94),  new Color(15,23,42),
-    };
     private Color[] C = CLARO;
 
     public PanelAdmin() { panel = new JPanel(new BorderLayout()); construir(); }
-    public void setTema(boolean o) { if (o != temaOscuro) { temaOscuro = o; construir(); } }
-    public void recargar() { cachedCitasHoy = null; cachedCitasVacunas = null; construir(); }
+    public void recargar()         { cachedCitasHoy = null; cachedCitasVacunas = null; construir(); }
+    public void invalidarCache()   { cachedCitasHoy = null; cachedCitasVacunas = null; }
 
     private void construir() {
-        panel.removeAll(); C = temaOscuro ? OSCURO : CLARO;
+        panel.removeAll(); C = CLARO;
         panel.setBackground(C[0]);
-        panel.add(SidebarAdmin.crear(C, temaOscuro, "panelAdmin", panel), BorderLayout.WEST);
+        panel.add(SidebarAdmin.crear(C, "panelAdmin", panel), BorderLayout.WEST);
 
         if (cachedCitasHoy != null && cachedCitasVacunas != null) {
             panel.add(crearContenido(), BorderLayout.CENTER);
@@ -329,9 +321,11 @@ public class PanelAdmin {
         List<Citas> citasHoy      = cachedCitasHoy      != null ? cachedCitasHoy      : Collections.emptyList();
         List<Citas> citasVacunas  = cachedCitasVacunas  != null ? cachedCitasVacunas  : Collections.emptyList();
 
-        long pendientesVac = citasVacunas.stream().filter(c ->
-            c.getEstadoCita() == EstadoCita.PENDIENTE || c.getEstadoCita() == EstadoCita.CONFIRMADA
-        ).count();
+        long pendientesVac = 0;
+        for (Citas c : citasVacunas) {
+            if (c.getEstadoCita() == EstadoCita.PENDIENTE || c.getEstadoCita() == EstadoCita.CONFIRMADA)
+                pendientesVac++;
+        }
 
         JPanel fila = new JPanel(new GridLayout(1,2,16,0));
         fila.setBackground(C[0]);
@@ -403,7 +397,10 @@ public class PanelAdmin {
         JButton gestionar = btn("Gestionar vacunas", C[4], C[1]);
         gestionar.setBorder(BorderFactory.createEmptyBorder(6,14,6,14));
         gestionar.setFont(new Font("Arial", Font.PLAIN, 12));
-        gestionar.addActionListener(e -> Main.cambiarPantalla("adminVacunas"));
+        gestionar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { Main.cambiarPantalla("adminVacunas"); }
+        });
         header.add(titulo, BorderLayout.WEST); header.add(gestionar, BorderLayout.EAST);
 
         final List<Citas> citasVac = cachedCitasVacunas != null ? cachedCitasVacunas : Collections.emptyList();
@@ -437,7 +434,7 @@ public class PanelAdmin {
         tabla.setSelectionBackground(C[3]); tabla.setFillsViewportHeight(true);
 
         JTableHeader th = tabla.getTableHeader();
-        th.setBackground(C[14]); th.setForeground(temaOscuro ? C[7] : C[1]);
+        th.setBackground(C[14]); th.setForeground(C[1]);
         th.setFont(new Font("Arial", Font.BOLD, 11)); th.setReorderingAllowed(false);
         th.setPreferredSize(new Dimension(0, 36));
 
@@ -568,29 +565,35 @@ public class PanelAdmin {
                 BorderFactory.createLineBorder(C[9], 1),
                 BorderFactory.createEmptyBorder(7, 14, 7, 14)));
         btnCancelar.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
-        btnCancelar.addActionListener(e -> dialog.dispose());
+        btnCancelar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { dialog.dispose(); }
+        });
 
         JButton btnGuardar = btn("Guardar", new Color(22, 163, 74), Color.WHITE);
         btnGuardar.setBorder(BorderFactory.createEmptyBorder(9, 18, 9, 18));
-        btnGuardar.addActionListener(e -> {
-            Vacunas vacSel = (Vacunas) cmbVacuna.getSelectedItem();
-            java.util.Date dAplic = dtAplic.getDate();
-            java.util.Date dProx  = dtProx.getDate();
+        btnGuardar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Vacunas vacSel = (Vacunas) cmbVacuna.getSelectedItem();
+                java.util.Date dAplic = dtAplic.getDate();
+                java.util.Date dProx  = dtProx.getDate();
 
-            if (vacSel == null) { JOptionPane.showMessageDialog(dialog, "Seleccione una vacuna."); return; }
-            if (dAplic == null) { JOptionPane.showMessageDialog(dialog, "La fecha de aplicación es obligatoria."); return; }
+                if (vacSel == null) { JOptionPane.showMessageDialog(dialog, "Seleccione una vacuna."); return; }
+                if (dAplic == null) { JOptionPane.showMessageDialog(dialog, "La fecha de aplicación es obligatoria."); return; }
 
-            Control_vacunas cv = new Control_vacunas();
-            cv.setMascota(mascota);
-            cv.setVacuna(vacSel);
-            cv.setFechaAplicacion(dAplic.toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
-            cv.setProximaDosis(dProx != null ? dProx.toInstant().atZone(ZoneId.systemDefault()).toLocalDate() : null);
-            try {
-                vacunaCtrl.guardar(cv);
-                JOptionPane.showMessageDialog(dialog, "Vacuna registrada correctamente.");
-                dialog.dispose();
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(dialog, "Error al guardar: " + ex.getMessage());
+                Control_vacunas cv = new Control_vacunas();
+                cv.setMascota(mascota);
+                cv.setVacuna(vacSel);
+                cv.setFechaAplicacion(dAplic.toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
+                cv.setProximaDosis(dProx != null ? dProx.toInstant().atZone(ZoneId.systemDefault()).toLocalDate() : null);
+                try {
+                    vacunaCtrl.guardar(cv);
+                    JOptionPane.showMessageDialog(dialog, "Vacuna registrada correctamente.");
+                    dialog.dispose();
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(dialog, "Error al guardar: " + ex.getMessage());
+                }
             }
         });
         btns.add(btnCancelar); btns.add(btnGuardar);
@@ -612,7 +615,7 @@ public class PanelAdmin {
         tabla.setShowGrid(false); tabla.setIntercellSpacing(new Dimension(0,0));
         tabla.setSelectionBackground(C[3]); tabla.setFillsViewportHeight(true);
         JTableHeader th = tabla.getTableHeader();
-        th.setBackground(C[14]); th.setForeground(temaOscuro?C[7]:C[1]);
+        th.setBackground(C[14]); th.setForeground(C[1]);
         th.setFont(new Font("Arial",Font.BOLD,11)); th.setReorderingAllowed(false);
         th.setPreferredSize(new Dimension(0,36));
         tabla.getColumnModel().getColumn(colEstado).setCellRenderer(new DefaultTableCellRenderer(){
@@ -652,9 +655,11 @@ public class PanelAdmin {
         List<Citas> citasVacunas;
         try { citasHoy      = citaCtrl.listarDeHoy();          } catch (Exception e) { citasHoy      = Collections.emptyList(); }
         try { citasVacunas  = citaCtrl.listarCitasVacunas();   } catch (Exception e) { citasVacunas  = Collections.emptyList(); }
-        long pendientes = citasVacunas.stream().filter(c ->
-            c.getEstadoCita() == EstadoCita.PENDIENTE || c.getEstadoCita() == EstadoCita.CONFIRMADA
-        ).count();
+        long pendientes = 0;
+        for (Citas c : citasVacunas) {
+            if (c.getEstadoCita() == EstadoCita.PENDIENTE || c.getEstadoCita() == EstadoCita.CONFIRMADA)
+                pendientes++;
+        }
 
         try (PrintWriter pw = new PrintWriter(new FileWriter(chooser.getSelectedFile()))) {
             pw.println("       REPORTE KAMPETS VETERINARIA      ");

@@ -141,11 +141,14 @@ public class CrearCuenta {
         btnOjoPass.setText("");
         btnOjoPass.setOpaque(false); btnOjoPass.setContentAreaFilled(false); btnOjoPass.setBorderPainted(false); btnOjoPass.setFocusPainted(false);
         btnOjoPass.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnOjoPass.addActionListener(e -> {
-            boolean vis = Boolean.TRUE.equals(btnOjoPass.getClientProperty("visible"));
-            if (!vis) { passwordField.setEchoChar((char)0); btnOjoPass.putClientProperty("visible", Boolean.TRUE); }
-            else { passwordField.setEchoChar('\u2022'); btnOjoPass.putClientProperty("visible", Boolean.FALSE); }
-            btnOjoPass.repaint();
+        btnOjoPass.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                boolean vis = Boolean.TRUE.equals(btnOjoPass.getClientProperty("visible"));
+                if (!vis) { passwordField.setEchoChar((char)0); btnOjoPass.putClientProperty("visible", Boolean.TRUE); }
+                else { passwordField.setEchoChar('\u2022'); btnOjoPass.putClientProperty("visible", Boolean.FALSE); }
+                btnOjoPass.repaint();
+            }
         });
 
         JPanel wrapPass = new JPanel(new BorderLayout()) {
@@ -196,11 +199,14 @@ public class CrearCuenta {
         btnOjoConfirmar.setText("");
         btnOjoConfirmar.setOpaque(false); btnOjoConfirmar.setContentAreaFilled(false); btnOjoConfirmar.setBorderPainted(false); btnOjoConfirmar.setFocusPainted(false);
         btnOjoConfirmar.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnOjoConfirmar.addActionListener(e -> {
-            boolean vis = Boolean.TRUE.equals(btnOjoConfirmar.getClientProperty("visible"));
-            if (!vis) { confirmarPasswordField.setEchoChar((char)0); btnOjoConfirmar.putClientProperty("visible", Boolean.TRUE); }
-            else { confirmarPasswordField.setEchoChar('\u2022'); btnOjoConfirmar.putClientProperty("visible", Boolean.FALSE); }
-            btnOjoConfirmar.repaint();
+        btnOjoConfirmar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                boolean vis = Boolean.TRUE.equals(btnOjoConfirmar.getClientProperty("visible"));
+                if (!vis) { confirmarPasswordField.setEchoChar((char)0); btnOjoConfirmar.putClientProperty("visible", Boolean.TRUE); }
+                else { confirmarPasswordField.setEchoChar('\u2022'); btnOjoConfirmar.putClientProperty("visible", Boolean.FALSE); }
+                btnOjoConfirmar.repaint();
+            }
         });
 
         JPanel wrapConfirmar = new JPanel(new BorderLayout()) {

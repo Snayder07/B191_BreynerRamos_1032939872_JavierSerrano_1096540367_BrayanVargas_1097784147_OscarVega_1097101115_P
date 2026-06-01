@@ -129,8 +129,12 @@ public class ConfigurarCorreoDialog extends JDialog {
         btnOjo.setBorder(BorderFactory.createLineBorder(BORDE, 1));
         btnOjo.setFocusPainted(false);
         btnOjo.setCursor(Main.cursorHover != null ? Main.cursorHover : new Cursor(Cursor.HAND_CURSOR));
-        btnOjo.addActionListener(e ->
-            tfPass.setEchoChar(tfPass.getEchoChar() == 0 ? '*' : (char) 0));
+        btnOjo.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                tfPass.setEchoChar(tfPass.getEchoChar() == 0 ? '*' : (char) 0);
+            }
+        });
         passPanel.add(tfPass, BorderLayout.CENTER);
         passPanel.add(btnOjo, BorderLayout.EAST);
         root.add(passPanel);
@@ -150,23 +154,28 @@ public class ConfigurarCorreoDialog extends JDialog {
 
         // ── Logica tabs ───────────────────────────────────
         CardLayout cl = (CardLayout) instrWrapper.getLayout();
-        btnBrevo.addActionListener(e -> {
-            proveedorActual = "brevo";
-            btnBrevo.setBackground(VERDE); btnBrevo.setForeground(Color.WHITE);
-            btnGmail.setBackground(Color.WHITE); btnGmail.setForeground(VERDE);
-            cl.show(instrWrapper, "brevo");
-            loginWrapper.setVisible(true);
-            lblLogin.setText("Tu email de cuenta Brevo (login SMTP)");
-            pack();
+        btnBrevo.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                proveedorActual = "brevo";
+                btnBrevo.setBackground(VERDE); btnBrevo.setForeground(Color.WHITE);
+                btnGmail.setBackground(Color.WHITE); btnGmail.setForeground(VERDE);
+                cl.show(instrWrapper, "brevo");
+                loginWrapper.setVisible(true);
+                lblLogin.setText("Tu email de cuenta Brevo (login SMTP)");
+                pack();
+            }
         });
-        btnGmail.addActionListener(e -> {
-            proveedorActual = "gmail";
-            btnGmail.setBackground(VERDE); btnGmail.setForeground(Color.WHITE);
-            btnBrevo.setBackground(Color.WHITE); btnBrevo.setForeground(VERDE);
-            cl.show(instrWrapper, "gmail");
-            // En Gmail el login == remitente, ocultamos el campo extra
-            loginWrapper.setVisible(false);
-            pack();
+        btnGmail.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                proveedorActual = "gmail";
+                btnGmail.setBackground(VERDE); btnGmail.setForeground(Color.WHITE);
+                btnBrevo.setBackground(Color.WHITE); btnBrevo.setForeground(VERDE);
+                cl.show(instrWrapper, "gmail");
+                loginWrapper.setVisible(false);
+                pack();
+            }
         });
 
         // ── Detectar proveedor guardado ───────────────────
@@ -176,73 +185,89 @@ public class ConfigurarCorreoDialog extends JDialog {
         }
 
         // ── Logica guardar ────────────────────────────────
-        btnGuardar.addActionListener(e -> {
-            String login = tfLogin.getText().trim();
-            String email = tfEmail.getText().trim();
-            String pass  = new String(tfPass.getPassword()).trim();
+        btnGuardar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String login = tfLogin.getText().trim();
+                String email = tfEmail.getText().trim();
+                String pass  = new String(tfPass.getPassword()).trim();
 
-            if (email.isEmpty() || !email.contains("@")) { error("Ingresa un correo remitente valido."); return; }
-            if (pass.isEmpty()) { error("Ingresa la CLAVE SMTP (no tu contrasena de cuenta)."); return; }
+                if (email.isEmpty() || !email.contains("@")) { error("Ingresa un correo remitente valido."); return; }
+                if (pass.isEmpty()) { error("Ingresa la CLAVE SMTP (no tu contrasena de cuenta)."); return; }
 
-            String host, smtpLogin;
-            if (proveedorActual.equals("brevo")) {
-                host = "smtp-relay.brevo.com";
-                smtpLogin = login.isEmpty() ? email : login;
-                if (!smtpLogin.contains("@")) { error("Ingresa el email de tu cuenta Brevo como login SMTP."); return; }
-            } else {
-                host = "smtp.gmail.com";
-                smtpLogin = email;
+                String host, smtpLogin;
+                if (proveedorActual.equals("brevo")) {
+                    host = "smtp-relay.brevo.com";
+                    smtpLogin = login.isEmpty() ? email : login;
+                    if (!smtpLogin.contains("@")) { error("Ingresa el email de tu cuenta Brevo como login SMTP."); return; }
+                } else {
+                    host = "smtp.gmail.com";
+                    smtpLogin = email;
+                }
+
+                ConfigService.setEmailCredenciales(email, smtpLogin, pass, host, "587");
+                JOptionPane.showMessageDialog(ConfigurarCorreoDialog.this,
+                    "Configuracion guardada.\nAhora puedes usar la recuperacion de contrasena.",
+                    "Listo", JOptionPane.INFORMATION_MESSAGE);
+                ConfigurarCorreoDialog.this.dispose();
             }
-
-            ConfigService.setEmailCredenciales(email, smtpLogin, pass, host, "587");
-            JOptionPane.showMessageDialog(this,
-                "Configuracion guardada.\nAhora puedes usar la recuperacion de contrasena.",
-                "Listo", JOptionPane.INFORMATION_MESSAGE);
-            dispose();
         });
 
         // ── Logica probar ─────────────────────────────────
-        btnProbar.addActionListener(e -> {
-            String login = tfLogin.getText().trim();
-            String email = tfEmail.getText().trim();
-            String pass  = new String(tfPass.getPassword()).trim();
+        btnProbar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String login = tfLogin.getText().trim();
+                String email = tfEmail.getText().trim();
+                String pass  = new String(tfPass.getPassword()).trim();
 
-            if (email.isEmpty() || pass.isEmpty()) { error("Completa los campos primero."); return; }
+                if (email.isEmpty() || pass.isEmpty()) { error("Completa los campos primero."); return; }
 
-            String host, smtpLogin;
-            if (proveedorActual.equals("brevo")) {
-                host = "smtp-relay.brevo.com";
-                smtpLogin = login.isEmpty() ? email : login;
-            } else {
-                host = "smtp.gmail.com";
-                smtpLogin = email;
-            }
-
-            // Guardar temporalmente para que CorreoService las use
-            ConfigService.setEmailCredenciales(email, smtpLogin, pass, host, "587");
-
-            btnProbar.setEnabled(false); btnProbar.setText("Probando...");
-            new Thread(() -> {
-                try {
-                    CorreoService.enviarCorreoGeneral(email, "Admin",
-                        "Prueba de conexion - Kampets",
-                        "<h2 style='color:#16653c'>Kampets Veterinaria</h2>" +
-                        "<p>La configuracion de correo funciona correctamente.</p>" +
-                        "<p>Si recibes este mensaje, el sistema esta listo.</p>");
-                    SwingUtilities.invokeLater(() -> {
-                        btnProbar.setEnabled(true); btnProbar.setText("Probar conexion");
-                        JOptionPane.showMessageDialog(this,
-                            "Correo enviado correctamente.\n" +
-                            "Revisa tu bandeja de entrada (y la carpeta de spam).",
-                            "Conexion exitosa", JOptionPane.INFORMATION_MESSAGE);
-                    });
-                } catch (Exception ex) {
-                    SwingUtilities.invokeLater(() -> {
-                        btnProbar.setEnabled(true); btnProbar.setText("Probar conexion");
-                        error(ex.getMessage());
-                    });
+                String host, smtpLogin;
+                if (proveedorActual.equals("brevo")) {
+                    host = "smtp-relay.brevo.com";
+                    smtpLogin = login.isEmpty() ? email : login;
+                } else {
+                    host = "smtp.gmail.com";
+                    smtpLogin = email;
                 }
-            }).start();
+
+                ConfigService.setEmailCredenciales(email, smtpLogin, pass, host, "587");
+
+                btnProbar.setEnabled(false); btnProbar.setText("Probando...");
+                final String emailFinal = email;
+                final String smtpLoginFinal = smtpLogin;
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            CorreoService.enviarCorreoGeneral(emailFinal, "Admin",
+                                "Prueba de conexion - Kampets",
+                                "<h2 style='color:#16653c'>Kampets Veterinaria</h2>" +
+                                "<p>La configuracion de correo funciona correctamente.</p>" +
+                                "<p>Si recibes este mensaje, el sistema esta listo.</p>");
+                            SwingUtilities.invokeLater(new Runnable() {
+                                @Override
+                                public void run() {
+                                    btnProbar.setEnabled(true); btnProbar.setText("Probar conexion");
+                                    JOptionPane.showMessageDialog(ConfigurarCorreoDialog.this,
+                                        "Correo enviado correctamente.\n" +
+                                        "Revisa tu bandeja de entrada (y la carpeta de spam).",
+                                        "Conexion exitosa", JOptionPane.INFORMATION_MESSAGE);
+                                }
+                            });
+                        } catch (Exception ex) {
+                            SwingUtilities.invokeLater(new Runnable() {
+                                @Override
+                                public void run() {
+                                    btnProbar.setEnabled(true); btnProbar.setText("Probar conexion");
+                                    error(ex.getMessage());
+                                }
+                            });
+                        }
+                    }
+                }).start();
+            }
         });
 
         setContentPane(root);

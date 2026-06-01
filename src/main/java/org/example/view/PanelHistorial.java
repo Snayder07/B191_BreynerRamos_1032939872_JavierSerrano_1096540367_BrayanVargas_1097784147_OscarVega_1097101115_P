@@ -14,7 +14,6 @@ import java.util.List;
 public class PanelHistorial {
     private final CitaAdminController ctrl = new CitaAdminController();
     public JPanel panel;
-    private boolean temaOscuro = false;
 
     private final Color[] CLARO = {
             new Color(240, 246, 252), new Color(26, 74, 122), Color.WHITE,
@@ -23,25 +22,14 @@ public class PanelHistorial {
             new Color(208, 228, 244), new Color(15, 53, 96),    new Color(122, 175, 212),
             new Color(168, 200, 232), new Color(168, 212, 245),
     };
-    private final Color[] OSCURO = {
-            new Color(18, 24, 38),  new Color(13, 18, 30),  new Color(26, 34, 52),
-            new Color(37, 55, 90),  new Color(32, 42, 64),  Color.WHITE,
-            new Color(226, 232, 240), new Color(100, 116, 139), new Color(251, 146, 60),
-            new Color(30, 41, 59),  new Color(9, 14, 24),   new Color(122, 175, 212),
-            new Color(80, 120, 170), new Color(100, 160, 210),
-    };
     private Color[] C = CLARO;
 
     public PanelHistorial() { panel = new JPanel(new BorderLayout()); construir(); }
 
-    public void setTema(boolean oscuro) {
-        if (oscuro != temaOscuro) { temaOscuro = oscuro; construir(); }
-    }
-
     public void recargar() { construir(); }
 
     private void construir() {
-        panel.removeAll(); C = temaOscuro ? OSCURO : CLARO;
+        panel.removeAll(); C = CLARO;
         panel.setBackground(C[0]);
         panel.add(crearSidebar(), BorderLayout.WEST);
         panel.add(crearContenido(), BorderLayout.CENTER);

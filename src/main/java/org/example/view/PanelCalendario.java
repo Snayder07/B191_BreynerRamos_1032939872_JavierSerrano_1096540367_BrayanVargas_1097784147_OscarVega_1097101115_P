@@ -1,6 +1,7 @@
 package org.example.view;
 
 import org.example.model.Citas;
+import org.example.model.EstadoCita;
 import org.example.service.CorreoService;
 
 import javax.swing.*;
@@ -24,7 +25,6 @@ import java.util.List;
 public class PanelCalendario {
 
     public JPanel panel;
-    private boolean temaOscuro = false;
 
     private List<Citas> cachedTodas = null;
     private LocalDate semanaInicio = LocalDate.now().with(DayOfWeek.MONDAY);
@@ -55,13 +55,6 @@ public class PanelCalendario {
             new Color(190,224,206), new Color(8,48,26),     new Color(135,195,160),
             new Color(215,35,35),   new Color(20,160,70),   new Color(208,240,220),
     };
-    private final Color[] OSCURO = {
-            new Color(14,19,30),  new Color(9,14,24),   new Color(20,28,46),
-            new Color(32,48,80),  new Color(26,36,58),  Color.WHITE,
-            new Color(218,228,236),new Color(136,155,174),new Color(248,140,55),
-            new Color(26,36,54),  new Color(7,11,20),   new Color(108,160,200),
-            new Color(235,65,65), new Color(30,190,85), new Color(11,19,36),
-    };
     private Color[] C = CLARO;
 
     private static final Color[] COL_BLOQUE = {
@@ -88,9 +81,6 @@ public class PanelCalendario {
         construir();
     }
 
-    public void setTema(boolean oscuro) {
-        if (oscuro != temaOscuro) { temaOscuro = oscuro; construir(); }
-    }
     public void recargar() { cachedTodas = null; construir(); }
 
     // ════════════════════════════════════════════════════════
@@ -98,9 +88,9 @@ public class PanelCalendario {
     // ════════════════════════════════════════════════════════
     private void construir() {
         panel.removeAll();
-        C = temaOscuro ? OSCURO : CLARO;
+        C = CLARO;
         panel.setBackground(C[0]);
-        panel.add(SidebarAdmin.crear(C, temaOscuro, "adminCalendario", panel), BorderLayout.WEST);
+        panel.add(SidebarAdmin.crear(C, "adminCalendario", panel), BorderLayout.WEST);
 
         if (cachedTodas != null) {
             panel.add(crearContenido(), BorderLayout.CENTER);
@@ -178,10 +168,10 @@ public class PanelCalendario {
         JButton btnIr  = navBtn("📅 Ir a fecha...");
         btnHoy.setFont(new Font("Segoe UI",Font.BOLD,12));
         btnIr.setBackground(new Color(12,80,48));
-        btnAnt.addActionListener(e->{ semanaInicio=semanaInicio.minusWeeks(1); construir(); });
-        btnHoy.addActionListener(e->{ semanaInicio=LocalDate.now().with(DayOfWeek.MONDAY); construir(); });
-        btnSig.addActionListener(e->{ semanaInicio=semanaInicio.plusWeeks(1); construir(); });
-        btnIr.addActionListener(e -> abrirSelectorFecha());
+        btnAnt.addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { semanaInicio=semanaInicio.minusWeeks(1); construir(); } });
+        btnHoy.addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { semanaInicio=LocalDate.now().with(DayOfWeek.MONDAY); construir(); } });
+        btnSig.addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { semanaInicio=semanaInicio.plusWeeks(1); construir(); } });
+        btnIr.addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { abrirSelectorFecha(); } });
         nav.add(lblSemana); nav.add(btnAnt); nav.add(btnHoy); nav.add(btnSig); nav.add(btnIr);
 
         JPanel der = new JPanel(new FlowLayout(FlowLayout.RIGHT,0,0));
@@ -319,8 +309,12 @@ public class PanelCalendario {
         scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         // Cabecera como columnHeader del scroll -> alineacion perfecta con la grilla
         scroll.setColumnHeaderView(cabecera);
-        SwingUtilities.invokeLater(()->
-                scroll.getVerticalScrollBar().setValue((8-HORA_INICIO)*ALTO_HORA));
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                scroll.getVerticalScrollBar().setValue((8-HORA_INICIO)*ALTO_HORA);
+            }
+        });
 
         wrapper.add(scroll, BorderLayout.CENTER);
         return wrapper;
@@ -397,12 +391,17 @@ public class PanelCalendario {
         List<Citas> semana=new ArrayList<>();
         for (Citas c:todas){
             if (c.getFechaCita()==null||c.getHoraCita()==null) continue;
+            if (c.getEstadoCita()==EstadoCita.CANCELADA) continue;
             if (c.getFechaCita().isBefore(semanaInicio)||c.getFechaCita().isAfter(fin)) continue;
             if (c.getFechaCita().getDayOfWeek()==DayOfWeek.SUNDAY) continue;
             semana.add(c);
         }
         Map<LocalDate,List<Citas>> porDia=new LinkedHashMap<>();
-        for (Citas c:semana) porDia.computeIfAbsent(c.getFechaCita(),k->new ArrayList<>()).add(c);
+        for (Citas c : semana) {
+            LocalDate key = c.getFechaCita();
+            if (!porDia.containsKey(key)) porDia.put(key, new ArrayList<>());
+            porDia.get(key).add(c);
+        }
 
         int ci=0;
         for (Map.Entry<LocalDate,List<Citas>> entry:porDia.entrySet()){
@@ -463,93 +462,152 @@ public class PanelCalendario {
     //  TARJETA (BLOQUE)
     // ════════════════════════════════════════════════════════
     private JPanel crearBloque(Citas cita, Color color, boolean comp) {
-        JPanel b = new JPanel(){
-            @Override protected void paintComponent(Graphics g){
-                Graphics2D g2=(Graphics2D)g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(0,0,0,22)); g2.fillRoundRect(2,2,getWidth()-2,getHeight()-2,10,10);
-                g2.setColor(color); g2.fillRoundRect(0,0,getWidth()-2,getHeight()-2,10,10);
-                g2.setColor(color.darker().darker()); g2.fillRoundRect(0,0,5,getHeight()-2,4,4);
+        DateTimeFormatter fh = DateTimeFormatter.ofPattern("HH:mm");
+        DateTimeFormatter fd = DateTimeFormatter.ofPattern("EEE d MMM", new Locale("es","CO"));
+
+        String hora        = cita.getHoraCita().format(fh);
+        String fecha       = cita.getFechaCita().format(fd);
+        String mascota     = cita.getMascota()!=null ? cita.getMascota().getNombre() : "?";
+        String cliente     = (cita.getMascota()!=null && cita.getMascota().getCliente()!=null)
+                             ? cita.getMascota().getCliente().getNombre() : "?";
+        String telefono    = (cita.getMascota()!=null && cita.getMascota().getCliente()!=null
+                             && cita.getMascota().getCliente().getTelefono()!=null)
+                             ? cita.getMascota().getCliente().getTelefono() : "";
+        String direccion   = (cita.getDireccionDomicilio()!=null && !cita.getDireccionDomicilio().isEmpty())
+                             ? cita.getDireccionDomicilio() : null;
+        String prio        = getPrioridadTexto(cita);
+        boolean vacuna     = esVacuna(cita);
+        boolean esDomicilio = direccion != null;
+
+        // Prefijo de icono para el nombre
+        String iconPrefijo = esDomicilio ? "🏠 " : (vacuna ? "💉 " : "");
+
+        JPanel b = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+                int w = getWidth(), h = getHeight();
+
+                // Sombra
+                g2.setColor(new Color(0,0,0,30));
+                g2.fillRoundRect(2,3,w-3,h-3,10,10);
+                // Fondo principal
+                g2.setColor(color);
+                g2.fillRoundRect(0,0,w-2,h-2,10,10);
+                // Barra lateral izquierda
+                g2.setColor(new Color(0,0,0,40));
+                g2.fillRoundRect(0,0,5,h-2,4,4);
+
+                // ── Zona de texto con margen ─────────────────
+                int px = 10, py = 7;
+                int maxW = w - px - 4;
+
+                // Fila 1: hora (derecha) + mascota (izquierda) — ambas en negrita
+                Font fBold   = new Font("Arial", Font.BOLD,   comp ? 9 : 11);
+                Font fNormal = new Font("Arial", Font.PLAIN,  comp ? 8 : 10);
+                Font fSmall  = new Font("Arial", Font.PLAIN,  comp ? 7 :  9);
+                Font fItalic = new Font("Arial", Font.ITALIC, 8);
+
+                g2.setFont(fBold);
+                FontMetrics fmBold = g2.getFontMetrics();
+                int lineH = fmBold.getHeight();
+
+                // Hora — alineada a la derecha
+                g2.setColor(new Color(220,255,235));
+                int horaW = fmBold.stringWidth(hora);
+                g2.drawString(hora, w - 2 - horaW - 4, py + fmBold.getAscent());
+
+                // Mascota — truncada si no cabe
+                g2.setColor(Color.WHITE);
+                String masLabel = iconPrefijo + mascota;
+                int masMaxW = maxW - horaW - 6;
+                g2.drawString(truncar(masLabel, fmBold, masMaxW), px, py + fmBold.getAscent());
+
+                int y = py + lineH + 2;
+
+                if (!comp) {
+                    // Fila 2: fecha + cliente
+                    g2.setFont(fSmall);
+                    FontMetrics fmS = g2.getFontMetrics();
+                    g2.setColor(new Color(210,248,228));
+                    g2.drawString(truncar(fecha, fmS, maxW), px, y + fmS.getAscent());
+                    y += fmS.getHeight() + 1;
+
+                    g2.setFont(fNormal);
+                    FontMetrics fmN = g2.getFontMetrics();
+                    g2.setColor(new Color(210,248,228));
+                    g2.drawString(truncar(cliente, fmN, maxW), px, y + fmN.getAscent());
+                    y += fmN.getHeight() + 1;
+
+                    // Fila 3: info extra
+                    if (esDomicilio) {
+                        g2.setFont(fSmall);
+                        FontMetrics fmS2 = g2.getFontMetrics();
+                        g2.setColor(new Color(255,240,140));
+                        g2.drawString(truncar("Domicilio: " + direccion, fmS2, maxW), px, y + fmS2.getAscent());
+                        y += fmS2.getHeight() + 1;
+                        if (!telefono.isEmpty()) {
+                            g2.setColor(new Color(160,255,200));
+                            g2.drawString(truncar("Tel: " + telefono, fmS2, maxW), px, y + fmS2.getAscent());
+                            y += fmS2.getHeight() + 1;
+                        }
+                    } else if (vacuna) {
+                        g2.setFont(fSmall);
+                        FontMetrics fmS2 = g2.getFontMetrics();
+                        g2.setColor(new Color(220,180,255));
+                        g2.drawString("Vacunacion", px, y + fmS2.getAscent());
+                        y += fmS2.getHeight() + 1;
+                    } else if (prio != null) {
+                        g2.setFont(fSmall);
+                        FontMetrics fmS2 = g2.getFontMetrics();
+                        g2.setColor(new Color(255,255,180));
+                        g2.drawString(truncar("! " + prio, fmS2, maxW), px, y + fmS2.getAscent());
+                        y += fmS2.getHeight() + 1;
+                    }
+
+                    // Pie: "Clic para editar"
+                    if (y + 12 < h - 2) {
+                        g2.setFont(fItalic);
+                        FontMetrics fmI = g2.getFontMetrics();
+                        g2.setColor(new Color(180,230,200,180));
+                        g2.drawString("Clic para editar", px, h - 6);
+                    }
+                }
                 g2.dispose();
             }
-        };
-        b.setLayout(new BorderLayout(2,1));
-        b.setOpaque(false);
-        b.setBorder(BorderFactory.createEmptyBorder(5,9,4,6));
-        b.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        DateTimeFormatter fh=DateTimeFormatter.ofPattern("HH:mm");
-        DateTimeFormatter fd=DateTimeFormatter.ofPattern("EEE d MMM", new Locale("es","CO"));
-
-        String hora    = cita.getHoraCita().format(fh);
-        String fecha   = cita.getFechaCita().format(fd);
-        String mascota = cita.getMascota()!=null?cita.getMascota().getNombre():"?";
-        String cliente = (cita.getMascota()!=null&&cita.getMascota().getCliente()!=null)
-                ?cita.getMascota().getCliente().getNombre():"?";
-        String prio    = getPrioridadTexto(cita);
-        boolean vacuna = esVacuna(cita);
-
-        // ── Fila superior: mascota (izq) + hora (der) ──────
-        JPanel filaTop=new JPanel(new BorderLayout(3,0));
-        filaTop.setOpaque(false);
-
-        JLabel lM=new JLabel((vacuna?"💉 ":"")+mascota);
-        lM.setFont(new Font("Segoe UI",Font.BOLD,comp?9:11));
-        lM.setForeground(Color.WHITE);
-        filaTop.add(lM, BorderLayout.CENTER);
-
-        JLabel lHora=new JLabel(hora);
-        lHora.setFont(new Font("Segoe UI",Font.BOLD,comp?9:11));
-        lHora.setForeground(new Color(220,255,235));
-        lHora.setHorizontalAlignment(SwingConstants.RIGHT);
-        filaTop.add(lHora, BorderLayout.EAST);
-
-        b.add(filaTop, BorderLayout.NORTH);
-
-        // ── Área central: fecha + cliente + prioridad ──────
-        JPanel centro=new JPanel();
-        centro.setLayout(new BoxLayout(centro,BoxLayout.Y_AXIS));
-        centro.setOpaque(false);
-
-        JLabel lFecha=new JLabel(fecha);
-        lFecha.setFont(new Font("Segoe UI",Font.PLAIN,comp?7:9));
-        lFecha.setForeground(new Color(210,248,228)); lFecha.setAlignmentX(0f);
-        centro.add(lFecha);
-
-        if (!comp){
-            JLabel lC=new JLabel(cliente);
-            lC.setFont(new Font("Segoe UI",Font.PLAIN,10));
-            lC.setForeground(new Color(210,248,228)); lC.setAlignmentX(0f);
-            centro.add(lC);
-
-            if (vacuna) {
-                JLabel lV=new JLabel("Vacunacion");
-                lV.setFont(new Font("Segoe UI",Font.BOLD,9));
-                lV.setForeground(new Color(220,180,255)); lV.setAlignmentX(0f);
-                centro.add(lV);
-            } else if (prio!=null){
-                JLabel lP=new JLabel("! "+prio);
-                lP.setFont(new Font("Segoe UI",Font.BOLD,9));
-                lP.setForeground(new Color(255,255,190)); lP.setAlignmentX(0f);
-                centro.add(lP);
+            // Trunca texto con "..." si supera el ancho maximo
+            private String truncar(String txt, FontMetrics fm, int maxW) {
+                if (fm.stringWidth(txt) <= maxW) return txt;
+                String puntos = "...";
+                int pW = fm.stringWidth(puntos);
+                StringBuilder sb = new StringBuilder();
+                for (char c : txt.toCharArray()) {
+                    if (fm.stringWidth(sb.toString()) + fm.charWidth(c) + pW > maxW) break;
+                    sb.append(c);
+                }
+                return sb + puntos;
             }
-
-            JLabel lEdit=new JLabel("Clic para editar");
-            lEdit.setFont(new Font("Segoe UI",Font.ITALIC,8));
-            lEdit.setForeground(new Color(200,240,215)); lEdit.setAlignmentX(0f);
-            centro.add(lEdit);
-        }
-
-        b.add(centro, BorderLayout.CENTER);
+        };
+        b.setOpaque(false);
+        b.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         // Tooltip enriquecido
         String tipoBadge = vacuna
                 ? "<br><b style='color:#c084fc'>💉 Cita de vacunacion</b>"
                 : (prio!=null?"<br>Prioridad: <b>"+prio+"</b>":"");
+        String tipoDomicilio = esDomicilio
+                ? "<br><b style='color:#facc15'>🏠 Domicilio: "+direccion+"</b>"
+                  +(telefono.isEmpty() ? "" : "<br><b style='color:#4ade80'>📞 Tel: "+telefono+"</b>")
+                : "";
         b.setToolTipText("<html><b>"+mascota+"</b><br>"
                 +"Fecha: "+fecha+"<br>"
                 +"Hora: <b>"+hora+"</b><br>"
                 +"Cliente: "+cliente
+                +tipoDomicilio
                 +tipoBadge
                 +"<br><i style='color:#aaa'>Clic para editar  |  Arrastra para mover</i>"
                 +"</html>");
@@ -626,9 +684,14 @@ public class PanelCalendario {
         header.setBackground(C[1]);
         header.setBorder(BorderFactory.createEmptyBorder(12,18,12,12));
 
-        String mascota=cita.getMascota()!=null?cita.getMascota().getNombre():"?";
-        String cliente=(cita.getMascota()!=null&&cita.getMascota().getCliente()!=null)
+        String mascota   = cita.getMascota()!=null?cita.getMascota().getNombre():"?";
+        String cliente   = (cita.getMascota()!=null&&cita.getMascota().getCliente()!=null)
                 ?cita.getMascota().getCliente().getNombre():"?";
+        String telPopup  = (cita.getMascota()!=null&&cita.getMascota().getCliente()!=null
+                &&cita.getMascota().getCliente().getTelefono()!=null)
+                ?cita.getMascota().getCliente().getTelefono():"";
+        String dirPopup  = (cita.getDireccionDomicilio()!=null&&!cita.getDireccionDomicilio().isEmpty())
+                ?cita.getDireccionDomicilio():null;
 
         JLabel lTitulo=new JLabel("Editar cita — "+mascota);
         lTitulo.setFont(new Font("Segoe UI",Font.BOLD,15));
@@ -646,7 +709,7 @@ public class PanelCalendario {
             @Override public void mouseEntered(MouseEvent e){btnX.setBackground(new Color(210,40,40));}
             @Override public void mouseExited(MouseEvent e){btnX.setBackground(new Color(180,30,30));}
         });
-        btnX.addActionListener(e->dlg.dispose());
+        btnX.addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { dlg.dispose(); } });
         header.add(btnX, BorderLayout.EAST);
         root.add(header, BorderLayout.NORTH);
 
@@ -669,10 +732,42 @@ public class PanelCalendario {
         infoBanner.add(lInfoM); infoBanner.add(lInfoC);
         body.add(infoBanner,gc);
 
+        // ── Banner de domicilio (solo si aplica) ────────────
+        if (dirPopup != null) {
+            gc.gridx=0; gc.gridy=1; gc.gridwidth=2;
+            JPanel domBanner = new JPanel();
+            domBanner.setLayout(new BoxLayout(domBanner, BoxLayout.Y_AXIS));
+            domBanner.setBackground(new Color(255,251,220));
+            domBanner.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(234,179,8),1),
+                    BorderFactory.createEmptyBorder(6,10,6,10)));
+            JLabel lDomTit = new JLabel("🏠  Cita a DOMICILIO");
+            lDomTit.setFont(new Font("Segoe UI",Font.BOLD,12));
+            lDomTit.setForeground(new Color(120,70,0));
+            JLabel lDomDir = new JLabel("📍  "+dirPopup);
+            lDomDir.setFont(new Font("Segoe UI",Font.PLAIN,11));
+            lDomDir.setForeground(new Color(80,50,0));
+            domBanner.add(lDomTit);
+            domBanner.add(Box.createVerticalStrut(3));
+            domBanner.add(lDomDir);
+            if (!telPopup.isEmpty()) {
+                JLabel lDomTel = new JLabel("📞  "+telPopup+"  — llamar antes de salir");
+                lDomTel.setFont(new Font("Segoe UI",Font.BOLD,11));
+                lDomTel.setForeground(new Color(14,100,50));
+                domBanner.add(Box.createVerticalStrut(3));
+                domBanner.add(lDomTel);
+            }
+            body.add(domBanner,gc);
+            gc.gridy=2;
+        } else {
+            gc.gridy=1;
+        }
+
         gc.gridwidth=1;
 
         // ── Campo FECHA ── JComboBox con días Lun–Sáb de las próximas 8 semanas
-        gc.gridx=0; gc.gridy=1;
+        int filaFecha = gc.gridy;
+        gc.gridx=0; gc.gridy=filaFecha;
         JLabel lFLbl=new JLabel("Fecha:");
         lFLbl.setFont(new Font("Segoe UI",Font.BOLD,12)); lFLbl.setForeground(C[6]);
         body.add(lFLbl,gc);
@@ -688,7 +783,8 @@ public class PanelCalendario {
             }
             cursor2=cursor2.plusWeeks(1);
         }
-        String[] fechaOpts=fechasDisp.stream().map(d->d.format(fdCombo)).toArray(String[]::new);
+        String[] fechaOpts = new String[fechasDisp.size()];
+        for (int i = 0; i < fechasDisp.size(); i++) fechaOpts[i] = fechasDisp.get(i).format(fdCombo);
         JComboBox<String> cbFecha=new JComboBox<>(fechaOpts);
         cbFecha.setFont(new Font("Segoe UI",Font.PLAIN,12));
         cbFecha.setPreferredSize(new Dimension(175,32));
@@ -699,7 +795,7 @@ public class PanelCalendario {
         body.add(cbFecha,gc);
 
         // ── Campo HORA ── JComboBox con intervalos de 15 min
-        gc.gridx=0; gc.gridy=2;
+        gc.gridx=0; gc.gridy=filaFecha+1;
         JLabel lHLbl=new JLabel("Hora:");
         lHLbl.setFont(new Font("Segoe UI",Font.BOLD,12)); lHLbl.setForeground(C[6]);
         body.add(lHLbl,gc);
@@ -718,7 +814,7 @@ public class PanelCalendario {
         body.add(cbHora,gc);
 
         // ── Aviso domingo ─────────────────────────────────
-        gc.gridx=0; gc.gridy=3; gc.gridwidth=2;
+        gc.gridx=0; gc.gridy=filaFecha+2; gc.gridwidth=2;
         JLabel lAviso=new JLabel(" ");
         lAviso.setFont(new Font("Segoe UI",Font.ITALIC,10));
         lAviso.setForeground(new Color(180,30,30));
@@ -735,30 +831,30 @@ public class PanelCalendario {
         JButton btnGuardar =footerBtn("Guardar",C[3],Color.WHITE);
         btnGuardar.setFont(new Font("Segoe UI",Font.BOLD,12));
 
-        btnCancelar.addActionListener(e->dlg.dispose());
+        btnCancelar.addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { dlg.dispose(); } });
 
-        btnGuardar.addActionListener(e->{
-            // Leer fecha del combo
-            String fechaSelStr=(String)cbFecha.getSelectedItem();
-            LocalDate nuevaFecha=LocalDate.parse(fechaSelStr, fdCombo);
+        btnGuardar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String fechaSelStr=(String)cbFecha.getSelectedItem();
+                LocalDate nuevaFecha=LocalDate.parse(fechaSelStr, fdCombo);
 
-            // Validar domingo (no debería ocurrir, pero por seguridad)
-            if (nuevaFecha.getDayOfWeek()==DayOfWeek.SUNDAY){
-                lAviso.setText("No se permiten citas los domingos.");
-                return;
+                if (nuevaFecha.getDayOfWeek()==DayOfWeek.SUNDAY){
+                    lAviso.setText("No se permiten citas los domingos.");
+                    return;
+                }
+                String horaStr=(String)cbHora.getSelectedItem();
+                LocalTime nuevaHora=LocalTime.parse(horaStr, DateTimeFormatter.ofPattern("HH:mm"));
+
+                LocalDate aF=cita.getFechaCita(); LocalTime aH=cita.getHoraCita();
+
+                if (nuevaFecha.equals(aF)&&nuevaHora.equals(aH)){
+                    dlg.dispose(); return;
+                }
+
+                dlg.dispose();
+                guardarCambioDesdeEditor(cita,nuevaFecha,nuevaHora,aF,aH);
             }
-            // Leer hora del combo
-            String horaStr=(String)cbHora.getSelectedItem();
-            LocalTime nuevaHora=LocalTime.parse(horaStr, DateTimeFormatter.ofPattern("HH:mm"));
-
-            LocalDate aF=cita.getFechaCita(); LocalTime aH=cita.getHoraCita();
-
-            if (nuevaFecha.equals(aF)&&nuevaHora.equals(aH)){
-                dlg.dispose(); return;
-            }
-
-            dlg.dispose();
-            guardarCambioDesdeEditor(cita,nuevaFecha,nuevaHora,aF,aH);
         });
 
         footer.add(btnCancelar); footer.add(btnGuardar);
@@ -869,16 +965,19 @@ public class PanelCalendario {
     }
 
     private void enviarNotificacion(Citas cita,LocalDate aF,LocalTime aH,LocalDate nF,LocalTime nH){
-        new Thread(()->{
-            try {
-                String correo=cita.getMascota().getCliente().getCorreo();
-                String nombre=cita.getMascota().getCliente().getNombre();
-                String mascota=cita.getMascota().getNombre();
-                DateTimeFormatter ff=DateTimeFormatter.ofPattern("EEEE d 'de' MMMM 'de' yyyy",new Locale("es","CO"));
-                DateTimeFormatter fh=DateTimeFormatter.ofPattern("HH:mm");
-                CorreoService.enviarCorreoGeneral(correo,nombre,"Tu cita en Kampets fue reprogramada",
-                        cuerpoCorreo(nombre,mascota,aF.format(ff),aH.format(fh),nF.format(ff),nH.format(fh)));
-            } catch(Exception ex){ System.err.println("Correo err: "+ex.getMessage()); }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    String correo=cita.getMascota().getCliente().getCorreo();
+                    String nombre=cita.getMascota().getCliente().getNombre();
+                    String mascota=cita.getMascota().getNombre();
+                    DateTimeFormatter ff=DateTimeFormatter.ofPattern("EEEE d 'de' MMMM 'de' yyyy",new Locale("es","CO"));
+                    DateTimeFormatter fh=DateTimeFormatter.ofPattern("HH:mm");
+                    CorreoService.enviarCorreoGeneral(correo,nombre,"Tu cita en Kampets fue reprogramada",
+                            cuerpoCorreo(nombre,mascota,aF.format(ff),aH.format(fh),nF.format(ff),nH.format(fh)));
+                } catch(Exception ex){ System.err.println("Correo err: "+ex.getMessage()); }
+            }
         }).start();
     }
 
@@ -924,7 +1023,7 @@ public class PanelCalendario {
         btnX.setOpaque(true); btnX.setBorderPainted(false); btnX.setFocusPainted(false);
         btnX.setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
         btnX.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnX.addActionListener(e -> dlg.dispose());
+        btnX.addActionListener(new ActionListener() { @Override public void actionPerformed(ActionEvent e) { dlg.dispose(); } });
         header.add(lTit, BorderLayout.WEST);
         header.add(btnX, BorderLayout.EAST);
         root.add(header, BorderLayout.NORTH);
@@ -963,7 +1062,9 @@ public class PanelCalendario {
 
         // Función para construir el grid de días
         Runnable[] construirGrid = {null};
-        construirGrid[0] = () -> {
+        construirGrid[0] = new Runnable() {
+            @Override
+            public void run() {
             gridWrapper.removeAll();
 
             int anio = navYear[0], mes = navMonth[0];
@@ -1018,11 +1119,14 @@ public class PanelCalendario {
                 }
 
                 final LocalDate fechaFinal = fecha;
-                btn.addActionListener(ev -> {
-                    seleccionado[0] = fechaFinal.with(DayOfWeek.MONDAY);
-                    semanaInicio = seleccionado[0];
-                    dlg.dispose();
-                    construir();
+                btn.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent ev) {
+                        seleccionado[0] = fechaFinal.with(DayOfWeek.MONDAY);
+                        semanaInicio = seleccionado[0];
+                        dlg.dispose();
+                        construir();
+                    }
                 });
 
                 // Hover
@@ -1045,18 +1149,25 @@ public class PanelCalendario {
             gridWrapper.revalidate();
             gridWrapper.repaint();
             dlg.pack();
+            }
         };
 
         // Lógica de navegación de mes
-        bAntMes.addActionListener(e -> {
-            navMonth[0]--;
-            if (navMonth[0] < 1) { navMonth[0] = 12; navYear[0]--; }
-            construirGrid[0].run();
+        bAntMes.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                navMonth[0]--;
+                if (navMonth[0] < 1) { navMonth[0] = 12; navYear[0]--; }
+                construirGrid[0].run();
+            }
         });
-        bSigMes.addActionListener(e -> {
-            navMonth[0]++;
-            if (navMonth[0] > 12) { navMonth[0] = 1; navYear[0]++; }
-            construirGrid[0].run();
+        bSigMes.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                navMonth[0]++;
+                if (navMonth[0] > 12) { navMonth[0] = 1; navYear[0]++; }
+                construirGrid[0].run();
+            }
         });
 
         // Nota informativa

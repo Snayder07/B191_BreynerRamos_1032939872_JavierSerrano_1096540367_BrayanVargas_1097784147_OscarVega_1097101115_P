@@ -86,15 +86,18 @@ public class Main {
                 panelAdmin.recargar(); expandirVentana();
                 // Si el correo no está configurado, avisar al admin la primera vez
                 if (!ConfigService.isCorreoConfigurado()) {
-                    SwingUtilities.invokeLater(() -> {
-                        int op = JOptionPane.showConfirmDialog(frame,
-                            "Para que funcione la recuperacion de contraseña\n" +
-                            "necesitas configurar el correo de Kampets.\n\n" +
-                            "¿Quieres configurarlo ahora?",
-                            "Configurar correo", JOptionPane.YES_NO_OPTION,
-                            JOptionPane.INFORMATION_MESSAGE);
-                        if (op == JOptionPane.YES_OPTION) {
-                            new ConfigurarCorreoDialog(frame).setVisible(true);
+                    SwingUtilities.invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            int op = JOptionPane.showConfirmDialog(frame,
+                                "Para que funcione la recuperacion de contraseña\n" +
+                                "necesitas configurar el correo de Kampets.\n\n" +
+                                "¿Quieres configurarlo ahora?",
+                                "Configurar correo", JOptionPane.YES_NO_OPTION,
+                                JOptionPane.INFORMATION_MESSAGE);
+                            if (op == JOptionPane.YES_OPTION) {
+                                new ConfigurarCorreoDialog(frame).setVisible(true);
+                            }
                         }
                     });
                 }
@@ -225,18 +228,8 @@ public class Main {
                 img, new Point(13, 2), "garraHover");
     }
 
-    public static void aplicarTemaGlobal(boolean oscuro) {
-        panelCliente.setTema(oscuro);
-        panelAdminCitas.setTema(oscuro);
-        panelAdminMascotas.setTema(oscuro);
-        panelAdminVacunas.setTema(oscuro);
-        panelAdminInventario.setTema(oscuro);
-        panelAdminReportes.setTema(oscuro);
-        panelMisCitas.setTema(oscuro);
-        panelHistorial.setTema(oscuro);
-        panelAlimentos.setTema(oscuro);
-        panelVacunas.setTema(oscuro);
-        panelAgendarCita.setTema(oscuro);
-        panelMisMascotas.setTema(oscuro);
+    public static void recargarPanelAdmin() {
+        panelAdmin.invalidarCache();
     }
+
 }

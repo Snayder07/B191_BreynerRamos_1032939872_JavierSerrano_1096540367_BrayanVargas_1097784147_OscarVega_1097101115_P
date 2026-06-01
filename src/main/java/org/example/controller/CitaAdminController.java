@@ -62,13 +62,20 @@ public class CitaAdminController {
                 final String cf = correoDestino, nf = nombreCliente, bf = cuerpo;
                 JOptionPane.showMessageDialog(panel, "Cita confirmada. Enviando correo a " + cf + "...",
                         "Cita confirmada", JOptionPane.INFORMATION_MESSAGE);
-                new Thread(() -> {
-                    try { CorreoService.enviarCorreoGeneral(cf, nf, "Confirmacion de cita - Kampets", bf); }
-                    catch (Exception ex) {
-                        SwingUtilities.invokeLater(() ->
-                                JOptionPane.showMessageDialog(panel,
-                                        "Cita confirmada, pero el correo no se pudo enviar:\n" + ex.getMessage(),
-                                        "Aviso de correo", JOptionPane.WARNING_MESSAGE));
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try { CorreoService.enviarCorreoGeneral(cf, nf, "Confirmacion de cita - Kampets", bf); }
+                        catch (Exception ex) {
+                            SwingUtilities.invokeLater(new Runnable() {
+                                @Override
+                                public void run() {
+                                    JOptionPane.showMessageDialog(panel,
+                                            "Cita confirmada, pero el correo no se pudo enviar:\n" + ex.getMessage(),
+                                            "Aviso de correo", JOptionPane.WARNING_MESSAGE);
+                                }
+                            });
+                        }
                     }
                 }).start();
             } else {

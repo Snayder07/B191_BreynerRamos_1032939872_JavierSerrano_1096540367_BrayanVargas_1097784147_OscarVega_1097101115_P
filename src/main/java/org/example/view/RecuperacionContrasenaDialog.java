@@ -67,36 +67,52 @@ public class RecuperacionContrasenaDialog extends JDialog {
         btnCancelar.setBounds(40, 228, 340, 32);
         p.add(btnCancelar);
 
-        btnEnviar.addActionListener(e -> {
-            String correo = campoCorreo.getText().trim();
-            if (correo.isEmpty()) {
-                mostrarError(p, "Por favor ingresa tu correo.");
-                return;
-            }
-            btnEnviar.setEnabled(false);
-            btnEnviar.setText("Enviando...");
-            // Envío en hilo aparte para no bloquear la UI
-            new Thread(() -> {
-                try {
-                    recuperacionService.enviarCodigoRecuperacion(correo);
-                    correoActual = correo.toLowerCase();
-                    SwingUtilities.invokeLater(() -> {
-                        btnEnviar.setEnabled(true);
-                        btnEnviar.setText("Enviar código");
-                        cardLayout.show(cardPanel, "paso2");
-                        pack();
-                    });
-                } catch (Exception ex) {
-                    SwingUtilities.invokeLater(() -> {
-                        btnEnviar.setEnabled(true);
-                        btnEnviar.setText("Enviar código");
-                        mostrarError(p, ex.getMessage());
-                    });
+        btnEnviar.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                String correo = campoCorreo.getText().trim();
+                if (correo.isEmpty()) {
+                    mostrarError(p, "Por favor ingresa tu correo.");
+                    return;
                 }
-            }).start();
+                btnEnviar.setEnabled(false);
+                btnEnviar.setText("Enviando...");
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            recuperacionService.enviarCodigoRecuperacion(correo);
+                            correoActual = correo.toLowerCase();
+                            SwingUtilities.invokeLater(new Runnable() {
+                                @Override
+                                public void run() {
+                                    btnEnviar.setEnabled(true);
+                                    btnEnviar.setText("Enviar código");
+                                    cardLayout.show(cardPanel, "paso2");
+                                    pack();
+                                }
+                            });
+                        } catch (Exception ex) {
+                            SwingUtilities.invokeLater(new Runnable() {
+                                @Override
+                                public void run() {
+                                    btnEnviar.setEnabled(true);
+                                    btnEnviar.setText("Enviar código");
+                                    mostrarError(p, ex.getMessage());
+                                }
+                            });
+                        }
+                    }
+                }).start();
+            }
         });
 
-        btnCancelar.addActionListener(e -> dispose());
+        btnCancelar.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                RecuperacionContrasenaDialog.this.dispose();
+            }
+        });
 
         return p;
     }
@@ -130,42 +146,60 @@ public class RecuperacionContrasenaDialog extends JDialog {
         btnAtras.setBounds(220, 238, 160, 30);
         p.add(btnAtras);
 
-        btnVerificar.addActionListener(e -> {
-            String cod = campoCodigo.getText().trim();
-            if (cod.isEmpty()) {
-                mostrarError(p, "Ingresa el código recibido.");
-                return;
-            }
-            if (recuperacionService.verificarCodigo(correoActual, cod)) {
-                cardLayout.show(cardPanel, "paso3");
-                pack();
-            } else {
-                mostrarError(p, "Código incorrecto. Revisa tu correo e intenta de nuevo.");
-            }
-        });
-
-        btnReenviar.addActionListener(e -> {
-            btnReenviar.setEnabled(false);
-            new Thread(() -> {
-                try {
-                    recuperacionService.enviarCodigoRecuperacion(correoActual);
-                    SwingUtilities.invokeLater(() -> {
-                        btnReenviar.setEnabled(true);
-                        mostrarInfo(p, "Código reenviado. Revisa tu correo.");
-                    });
-                } catch (Exception ex) {
-                    SwingUtilities.invokeLater(() -> {
-                        btnReenviar.setEnabled(true);
-                        mostrarError(p, ex.getMessage());
-                    });
+        btnVerificar.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                String cod = campoCodigo.getText().trim();
+                if (cod.isEmpty()) {
+                    mostrarError(p, "Ingresa el código recibido.");
+                    return;
                 }
-            }).start();
+                if (recuperacionService.verificarCodigo(correoActual, cod)) {
+                    cardLayout.show(cardPanel, "paso3");
+                    pack();
+                } else {
+                    mostrarError(p, "Código incorrecto. Revisa tu correo e intenta de nuevo.");
+                }
+            }
         });
 
-        btnAtras.addActionListener(e -> {
-            campoCodigo.setText("");
-            cardLayout.show(cardPanel, "paso1");
-            pack();
+        btnReenviar.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                btnReenviar.setEnabled(false);
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            recuperacionService.enviarCodigoRecuperacion(correoActual);
+                            SwingUtilities.invokeLater(new Runnable() {
+                                @Override
+                                public void run() {
+                                    btnReenviar.setEnabled(true);
+                                    mostrarInfo(p, "Código reenviado. Revisa tu correo.");
+                                }
+                            });
+                        } catch (Exception ex) {
+                            SwingUtilities.invokeLater(new Runnable() {
+                                @Override
+                                public void run() {
+                                    btnReenviar.setEnabled(true);
+                                    mostrarError(p, ex.getMessage());
+                                }
+                            });
+                        }
+                    }
+                }).start();
+            }
+        });
+
+        btnAtras.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                campoCodigo.setText("");
+                cardLayout.show(cardPanel, "paso1");
+                pack();
+            }
         });
 
         return p;
@@ -214,16 +248,19 @@ public class RecuperacionContrasenaDialog extends JDialog {
         btnOjo_nueva.setOpaque(false); btnOjo_nueva.setContentAreaFilled(false); btnOjo_nueva.setBorderPainted(false);
         btnOjo_nueva.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
         btnOjo_nueva.setBounds(352, 124, 28, 28);
-        btnOjo_nueva.addActionListener(ev -> {
-            boolean oculto = (Boolean) btnOjo_nueva.getClientProperty("oculto");
-            if (oculto) {
-                campoNueva.setEchoChar((char)0);
-                btnOjo_nueva.putClientProperty("oculto", Boolean.FALSE);
-            } else {
-                campoNueva.setEchoChar('\u2022');
-                btnOjo_nueva.putClientProperty("oculto", Boolean.TRUE);
+        btnOjo_nueva.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent ev) {
+                boolean oculto = (Boolean) btnOjo_nueva.getClientProperty("oculto");
+                if (oculto) {
+                    campoNueva.setEchoChar((char)0);
+                    btnOjo_nueva.putClientProperty("oculto", Boolean.FALSE);
+                } else {
+                    campoNueva.setEchoChar('\u2022');
+                    btnOjo_nueva.putClientProperty("oculto", Boolean.TRUE);
+                }
+                btnOjo_nueva.repaint();
             }
-            btnOjo_nueva.repaint();
         });
         p.add(btnOjo_nueva);
 
@@ -248,16 +285,19 @@ public class RecuperacionContrasenaDialog extends JDialog {
         btnOjo_confirmar.setOpaque(false); btnOjo_confirmar.setContentAreaFilled(false); btnOjo_confirmar.setBorderPainted(false);
         btnOjo_confirmar.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
         btnOjo_confirmar.setBounds(352, 204, 28, 28);
-        btnOjo_confirmar.addActionListener(ev -> {
-            boolean oculto = (Boolean) btnOjo_confirmar.getClientProperty("oculto");
-            if (oculto) {
-                campoConfirmar.setEchoChar((char)0);
-                btnOjo_confirmar.putClientProperty("oculto", Boolean.FALSE);
-            } else {
-                campoConfirmar.setEchoChar('\u2022');
-                btnOjo_confirmar.putClientProperty("oculto", Boolean.TRUE);
+        btnOjo_confirmar.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent ev) {
+                boolean oculto = (Boolean) btnOjo_confirmar.getClientProperty("oculto");
+                if (oculto) {
+                    campoConfirmar.setEchoChar((char)0);
+                    btnOjo_confirmar.putClientProperty("oculto", Boolean.FALSE);
+                } else {
+                    campoConfirmar.setEchoChar('\u2022');
+                    btnOjo_confirmar.putClientProperty("oculto", Boolean.TRUE);
+                }
+                btnOjo_confirmar.repaint();
             }
-            btnOjo_confirmar.repaint();
         });
         p.add(btnOjo_confirmar);
 
@@ -265,17 +305,20 @@ public class RecuperacionContrasenaDialog extends JDialog {
         btnCambiar.setBounds(40, 255, 340, 40);
         p.add(btnCambiar);
 
-        btnCambiar.addActionListener(e -> {
-            String nueva    = new String(campoNueva.getPassword());
-            String confirma = new String(campoConfirmar.getPassword());
-            try {
-                recuperacionService.cambiarContrasena(correoActual, nueva, confirma);
-                JOptionPane.showMessageDialog(this,
-                        "¡Contraseña actualizada exitosamente!\nYa puedes iniciar sesión con tu nueva contraseña.",
-                        "Listo", JOptionPane.INFORMATION_MESSAGE);
-                dispose();
-            } catch (Exception ex) {
-                mostrarError(p, ex.getMessage());
+        btnCambiar.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                String nueva    = new String(campoNueva.getPassword());
+                String confirma = new String(campoConfirmar.getPassword());
+                try {
+                    recuperacionService.cambiarContrasena(correoActual, nueva, confirma);
+                    JOptionPane.showMessageDialog(RecuperacionContrasenaDialog.this,
+                            "¡Contraseña actualizada exitosamente!\nYa puedes iniciar sesión con tu nueva contraseña.",
+                            "Listo", JOptionPane.INFORMATION_MESSAGE);
+                    RecuperacionContrasenaDialog.this.dispose();
+                } catch (Exception ex) {
+                    mostrarError(p, ex.getMessage());
+                }
             }
         });
 

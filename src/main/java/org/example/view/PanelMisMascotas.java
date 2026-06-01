@@ -16,7 +16,6 @@ import java.util.List;
 
 public class PanelMisMascotas {
     public JPanel panel;
-    private boolean temaOscuro = false;
 
     private final MascotaAdminController ctrl = new MascotaAdminController();
 
@@ -27,13 +26,6 @@ public class PanelMisMascotas {
             new Color(208,228,244), new Color(15,53,96),    new Color(122,175,212),
             new Color(168,200,232), new Color(168,212,245),
     };
-    private final Color[] OSCURO = {
-            new Color(18,24,38),   new Color(13,18,30),   new Color(26,34,52),
-            new Color(37,55,90),   new Color(32,42,64),   Color.WHITE,
-            new Color(226,232,240),new Color(100,116,139),new Color(251,146,60),
-            new Color(30,41,59),   new Color(9,14,24),    new Color(122,175,212),
-            new Color(80,120,170), new Color(100,160,210),
-    };
     private Color[] C = CLARO;
 
     public PanelMisMascotas() {
@@ -41,15 +33,11 @@ public class PanelMisMascotas {
         construir();
     }
 
-    public void setTema(boolean oscuro) {
-        if (oscuro != temaOscuro) { temaOscuro = oscuro; construir(); }
-    }
-
     public void recargar() { construir(); }
 
     private void construir() {
         panel.removeAll();
-        C = temaOscuro ? OSCURO : CLARO;
+        C = CLARO;
         panel.setBackground(C[0]);
         panel.add(crearSidebar(),   BorderLayout.WEST);
         panel.add(crearContenido(), BorderLayout.CENTER);
@@ -379,24 +367,30 @@ public class PanelMisMascotas {
         JButton btnCancel = btn("Cancelar",C[4],C[1],true);
         btnCancel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(C[9],1), BorderFactory.createEmptyBorder(8,16,8,16)));
-        btnCancel.addActionListener(e -> dlg.dispose());
+        btnCancel.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { dlg.dispose(); }
+        });
         JButton btnGuardar = btn("Guardar cambios",C[1],C[5],false);
         btnGuardar.setFont(new Font("Arial",Font.BOLD,13));
         btnGuardar.setBorder(BorderFactory.createEmptyBorder(8,16,8,16));
-        btnGuardar.addActionListener(e -> {
-            String nuevoNombre = tfNombre.getText().trim();
-            Especies nuevaEspecie = (Especies) cbEspecie.getSelectedItem();
-            String nuevoSexo = (String) cbSexo.getSelectedItem();
-            java.time.LocalDate nuevaFecha = null;
-            if (dateChooser.getDate() != null) {
-                java.util.Calendar cal = java.util.Calendar.getInstance();
-                cal.setTime(dateChooser.getDate());
-                nuevaFecha = java.time.LocalDate.of(cal.get(java.util.Calendar.YEAR),
-                        cal.get(java.util.Calendar.MONTH)+1, cal.get(java.util.Calendar.DAY_OF_MONTH));
+        btnGuardar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String nuevoNombre = tfNombre.getText().trim();
+                Especies nuevaEspecie = (Especies) cbEspecie.getSelectedItem();
+                String nuevoSexo = (String) cbSexo.getSelectedItem();
+                java.time.LocalDate nuevaFecha = null;
+                if (dateChooser.getDate() != null) {
+                    java.util.Calendar cal = java.util.Calendar.getInstance();
+                    cal.setTime(dateChooser.getDate());
+                    nuevaFecha = java.time.LocalDate.of(cal.get(java.util.Calendar.YEAR),
+                            cal.get(java.util.Calendar.MONTH)+1, cal.get(java.util.Calendar.DAY_OF_MONTH));
+                }
+                ctrl.actualizarMascota(mascota, nuevoNombre, nuevaEspecie, nuevaFecha, nuevoSexo, panel);
+                dlg.dispose();
+                construir();
             }
-            ctrl.actualizarMascota(mascota, nuevoNombre, nuevaEspecie, nuevaFecha, nuevoSexo, panel);
-            dlg.dispose();
-            construir();
         });
         bots.add(btnCancel); bots.add(btnGuardar);
         bots.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -499,11 +493,14 @@ public class PanelMisMascotas {
         form.add(tfOtraEspecie);
         form.add(Box.createVerticalStrut(10));
 
-        cbEspecie.addActionListener(e -> {
-            boolean esOtro = "Otro...".equals(cbEspecie.getSelectedItem());
-            lOtra.setVisible(esOtro);
-            tfOtraEspecie.setVisible(esOtro);
-            form.revalidate();
+        cbEspecie.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                boolean esOtro = "Otro...".equals(cbEspecie.getSelectedItem());
+                lOtra.setVisible(esOtro);
+                tfOtraEspecie.setVisible(esOtro);
+                form.revalidate();
+            }
         });
 
         // Fecha de nacimiento
@@ -585,53 +582,62 @@ public class PanelMisMascotas {
         btnCancel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(C[9], 1),
                 BorderFactory.createEmptyBorder(8, 20, 8, 20)));
-        btnCancel.addActionListener(e -> dlg.dispose());
+        btnCancel.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { dlg.dispose(); }
+        });
 
         JButton btnGuardar = btn("Guardar mascota", C[1], C[5], false);
         btnGuardar.setFont(new Font("Arial", Font.BOLD, 13));
         btnGuardar.setBorder(BorderFactory.createEmptyBorder(9, 22, 9, 22));
-        btnGuardar.addActionListener(e -> {
-            String nombre   = tfNombre.getText().trim();
-            String sexo     = (String) cbSexo.getSelectedItem();
-            Cliente cliente = Main.clienteActual;
+        btnGuardar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String nombre   = tfNombre.getText().trim();
+                String sexo     = (String) cbSexo.getSelectedItem();
+                Cliente cliente = Main.clienteActual;
 
-            Especies especie;
-            if ("Otro...".equals(cbEspecie.getSelectedItem())) {
-                String nombreOtra = tfOtraEspecie.getText().trim();
-                if (nombreOtra.isEmpty()) {
-                    JOptionPane.showMessageDialog(dlg, "Escribe el nombre de la especie/raza.",
-                            "Campo vacío", JOptionPane.WARNING_MESSAGE);
-                    return;
+                Especies especie;
+                if ("Otro...".equals(cbEspecie.getSelectedItem())) {
+                    String nombreOtra = tfOtraEspecie.getText().trim();
+                    if (nombreOtra.isEmpty()) {
+                        JOptionPane.showMessageDialog(dlg, "Escribe el nombre de la especie/raza.",
+                                "Campo vacío", JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
+                    especie = ctrl.obtenerOCrearEspecie(nombreOtra);
+                    if (especie == null) {
+                        JOptionPane.showMessageDialog(dlg, "No se pudo guardar la especie. Intenta de nuevo.",
+                                "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                } else {
+                    especie = (Especies) cbEspecie.getSelectedItem();
                 }
-                especie = ctrl.obtenerOCrearEspecie(nombreOtra);
-                if (especie == null) {
-                    JOptionPane.showMessageDialog(dlg, "No se pudo guardar la especie. Intenta de nuevo.",
-                            "Error", JOptionPane.ERROR_MESSAGE);
-                    return;
+
+                String fecha = "";
+                if (dateChooser.getDate() != null) {
+                    fecha = new SimpleDateFormat("yyyy-MM-dd").format(dateChooser.getDate());
                 }
-            } else {
-                especie = (Especies) cbEspecie.getSelectedItem();
-            }
 
-            String fecha = "";
-            if (dateChooser.getDate() != null) {
-                fecha = new SimpleDateFormat("yyyy-MM-dd").format(dateChooser.getDate());
-            }
-
-            boolean ok = ctrl.registrarMascota(nombre, especie, cliente, fecha, sexo,
-                    tfCaracteristica.getText(), panel,
-                    () -> {
-                        tfCaracteristica.setBorder(BorderFactory.createCompoundBorder(
-                                BorderFactory.createLineBorder(bordeError, 2),
-                                BorderFactory.createEmptyBorder(6, 10, 6, 10)));
-                        lblCarError.setText("⚠ Obligatorio para distinguir esta mascota");
-                        lblCarError.setVisible(true);
-                        tfCaracteristica.requestFocusInWindow();
-                        form.revalidate();
-                    });
-            if (ok) {
-                dlg.dispose();
-                construir();
+                boolean ok = ctrl.registrarMascota(nombre, especie, cliente, fecha, sexo,
+                        tfCaracteristica.getText(), panel,
+                        new Runnable() {
+                            @Override
+                            public void run() {
+                                tfCaracteristica.setBorder(BorderFactory.createCompoundBorder(
+                                        BorderFactory.createLineBorder(bordeError, 2),
+                                        BorderFactory.createEmptyBorder(6, 10, 6, 10)));
+                                lblCarError.setText("⚠ Obligatorio para distinguir esta mascota");
+                                lblCarError.setVisible(true);
+                                tfCaracteristica.requestFocusInWindow();
+                                form.revalidate();
+                            }
+                        });
+                if (ok) {
+                    dlg.dispose();
+                    construir();
+                }
             }
         });
 

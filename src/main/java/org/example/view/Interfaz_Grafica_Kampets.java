@@ -101,16 +101,19 @@ public class Interfaz_Grafica_Kampets {
         btnOjo1.setText("");
         btnOjo1.setOpaque(false); btnOjo1.setContentAreaFilled(false); btnOjo1.setBorderPainted(false); btnOjo1.setFocusPainted(false);
         btnOjo1.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnOjo1.addActionListener(e -> {
-            boolean vis = (Boolean) btnOjo1.getClientProperty("visible") == Boolean.TRUE;
-            if (!vis) {
-                passwordField1.setEchoChar((char) 0);
-                btnOjo1.putClientProperty("visible", Boolean.TRUE);
-            } else {
-                passwordField1.setEchoChar('\u2022');
-                btnOjo1.putClientProperty("visible", Boolean.FALSE);
+        btnOjo1.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                boolean vis = (Boolean) btnOjo1.getClientProperty("visible") == Boolean.TRUE;
+                if (!vis) {
+                    passwordField1.setEchoChar((char) 0);
+                    btnOjo1.putClientProperty("visible", Boolean.TRUE);
+                } else {
+                    passwordField1.setEchoChar('\u2022');
+                    btnOjo1.putClientProperty("visible", Boolean.FALSE);
+                }
+                btnOjo1.repaint();
             }
-            btnOjo1.repaint();
         });
 
         // Panel contenedor: campo + ojo lado a lado

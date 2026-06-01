@@ -182,6 +182,20 @@ public class Citas implements Persistible {
         return lista;
     }
 
+    public static Citas buscarVacunacionActivaPorMascotaFechaBD(Integer mascotaId, LocalDate fecha) {
+        ConexionBD bd = new ConexionBD();
+        try {
+            ResultSet rs = bd.consultarBD(SQL_BASE +
+                    " WHERE m.id = " + mascotaId +
+                    " AND c.fecha_cita = '" + fecha + "'" +
+                    " AND LOWER(c.motivo) LIKE '%vacun%'" +
+                    " AND c.estado_cita NOT IN ('CANCELADA','COMPLETADA')" +
+                    " ORDER BY c.id DESC LIMIT 1");
+            if (rs.next()) return mapear(rs);
+        } catch (Exception e) { /* no encontrada */ }
+        return null;
+    }
+
     public static Citas buscarPorIdBD(Integer id) {
         ConexionBD bd = new ConexionBD();
         try {

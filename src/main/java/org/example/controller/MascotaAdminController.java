@@ -63,11 +63,15 @@ public class MascotaAdminController {
             }
 
             List<Mascotas> todas = Mascotas.consultarTodosBD();
-            boolean hayConflicto = todas.stream().anyMatch(m ->
-                    m.getNombre().equalsIgnoreCase(nombre.trim()) &&
+            boolean hayConflicto = false;
+            for (Mascotas m : todas) {
+                if (m.getNombre().equalsIgnoreCase(nombre.trim()) &&
                     m.getEspecie() != null &&
-                    m.getEspecie().getNombre().equalsIgnoreCase(especie.getNombre())
-            );
+                    m.getEspecie().getNombre().equalsIgnoreCase(especie.getNombre())) {
+                    hayConflicto = true;
+                    break;
+                }
+            }
             String car = (caracteristica != null) ? caracteristica.trim() : "";
             if (hayConflicto) {
                 if (car.isEmpty()) {
@@ -75,12 +79,16 @@ public class MascotaAdminController {
                             "Ya existe una mascota llamada \"" + nombre.trim() + "\" de especie " +
                             especie.getNombre() + ".\nIngresa una caracteristica que la distinga.");
                 }
-                boolean carDuplicada = todas.stream().anyMatch(m ->
-                        m.getNombre().equalsIgnoreCase(nombre.trim()) &&
+                boolean carDuplicada = false;
+                for (Mascotas m : todas) {
+                    if (m.getNombre().equalsIgnoreCase(nombre.trim()) &&
                         m.getEspecie() != null &&
                         m.getEspecie().getNombre().equalsIgnoreCase(especie.getNombre()) &&
-                        car.equalsIgnoreCase(m.getCaracteristica() != null ? m.getCaracteristica().trim() : "")
-                );
+                        car.equalsIgnoreCase(m.getCaracteristica() != null ? m.getCaracteristica().trim() : "")) {
+                        carDuplicada = true;
+                        break;
+                    }
+                }
                 if (carDuplicada) {
                     throw new NecesitaCaracteristicaException(
                             "Ya existe una mascota con ese nombre, especie y esa misma caracteristica.\n" +
