@@ -3,12 +3,6 @@ package org.example.service;
 import java.io.*;
 import java.util.Properties;
 
-/**
- * Guarda y lee la configuracion de la app en:
- *   C:\Users\<usuario>\.kampets\config.properties
- *
- * Asi las credenciales NO van en el codigo fuente.
- */
 public class ConfigService {
 
     private static final File CONFIG_FILE = new File(
