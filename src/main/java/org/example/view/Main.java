@@ -16,6 +16,9 @@ public class Main {
     public static Cliente   clienteActual   = null;
     public static Empleados empleadoActual  = null;
 
+    // ── Controla que el aviso de correo solo salga UNA vez por sesión de admin ──
+    private static boolean correoAvisadoEnSesion = false;
+
     // ── Instancias de cada panel ──────────────────────────
     private static PanelCliente         panelCliente         = new PanelCliente();
     private static PanelAdmin           panelAdmin           = new PanelAdmin();
@@ -75,6 +78,7 @@ public class Main {
                 frame.setExtendedState(JFrame.NORMAL);
                 frame.setSize(420, 520);
                 frame.setLocationRelativeTo(null);
+                correoAvisadoEnSesion = false; // reiniciar para la próxima sesión de admin
                 break;
             case "crearCuenta":
                 frame.setExtendedState(JFrame.NORMAL);
@@ -84,14 +88,16 @@ public class Main {
             case "panelCliente":   panelCliente.recargar();         expandirVentana(); break;
             case "panelAdmin":
                 panelAdmin.recargar(); expandirVentana();
-                // Si el correo no está configurado, avisar al admin la primera vez
-                if (!ConfigService.isCorreoConfigurado()) {
+                // Solo mostrar el aviso de correo la PRIMERA vez que el admin entra en esta sesión
+                if (!correoAvisadoEnSesion && !ConfigService.isCorreoConfigurado()) {
+                    correoAvisadoEnSesion = true;
                     SwingUtilities.invokeLater(new Runnable() {
                         @Override
                         public void run() {
                             int op = JOptionPane.showConfirmDialog(frame,
-                                "Para que funcione la recuperacion de contraseña\n" +
-                                "necesitas configurar el correo de Kampets.\n\n" +
+                                "Para que funcione el envio de correos (confirmacion de citas,\n" +
+                                "vacunas, recuperacion de contrasena) necesitas configurar\n" +
+                                "el correo de Kampets.\n\n" +
                                 "¿Quieres configurarlo ahora?",
                                 "Configurar correo", JOptionPane.YES_NO_OPTION,
                                 JOptionPane.INFORMATION_MESSAGE);

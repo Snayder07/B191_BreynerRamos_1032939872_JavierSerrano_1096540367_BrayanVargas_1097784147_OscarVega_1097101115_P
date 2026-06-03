@@ -1,6 +1,5 @@
 package org.example.view;
 
-import org.example.controller.CitaAdminController;
 import org.example.model.Citas;
 
 import javax.swing.*;
@@ -12,7 +11,6 @@ import java.util.Collections;
 import java.util.List;
 
 public class PanelHistorial {
-    private final CitaAdminController ctrl = new CitaAdminController();
     public JPanel panel;
 
     private final Color[] CLARO = {
@@ -176,7 +174,7 @@ public class PanelHistorial {
 
         // Cargar citas pasadas del cliente
         List<Citas> pasadas = Main.clienteActual != null
-                ? ctrl.listarPasadasPorCliente(Main.clienteActual.getId())
+                ? Citas.consultarPasadasPorClienteBD(Main.clienteActual.getId())
                 : Collections.emptyList();
 
         // Stats reales

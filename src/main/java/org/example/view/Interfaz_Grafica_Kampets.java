@@ -1,6 +1,7 @@
 package org.example.view;
 
-import org.example.controller.LoginController;
+import org.example.model.Cliente;
+import org.example.model.Empleados;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -16,8 +17,6 @@ public class Interfaz_Grafica_Kampets {
     private JButton entrarAdminButton;
     private JButton crearCuentaButton;
 
-    // ── Conectado al LoginController ──────────────────────
-    private final LoginController loginController = new LoginController();
 
     public Interfaz_Grafica_Kampets() {
 
@@ -220,7 +219,15 @@ public class Interfaz_Grafica_Kampets {
                             "Contraseña muy corta", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
-                loginController.loginCliente(correo, clave, panel);
+                try {
+                    Cliente c = Cliente.buscarPorCorreoBD(correo.trim().toLowerCase());
+                    if (c == null) throw new Exception("El correo no esta registrado.");
+                    if (!c.getContrasena().equals(clave)) throw new Exception("Contrasena incorrecta.");
+                    Main.clienteActual = c; Main.empleadoActual = null;
+                    Main.cambiarPantalla("panelCliente");
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(panel, ex.getMessage(), "Error de acceso", JOptionPane.ERROR_MESSAGE);
+                }
             }
         });
 
@@ -241,7 +248,16 @@ public class Interfaz_Grafica_Kampets {
                             "Contraseña muy corta", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
-                loginController.loginAdmin(correo, clave, panel);
+                try {
+                    Empleados emp = Empleados.buscarPorCorreoBD(correo.trim());
+                    if (emp == null) emp = Empleados.buscarPorCorreoBD(correo.trim().toLowerCase());
+                    if (emp == null) throw new Exception("No existe un administrador con ese correo.");
+                    if (!emp.getContrasena().trim().equals(clave.trim())) throw new Exception("Contrasena incorrecta.");
+                    Main.clienteActual = null; Main.empleadoActual = emp;
+                    Main.cambiarPantalla("panelAdmin");
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(panel, ex.getMessage(), "Error de acceso", JOptionPane.ERROR_MESSAGE);
+                }
             }
         });
 

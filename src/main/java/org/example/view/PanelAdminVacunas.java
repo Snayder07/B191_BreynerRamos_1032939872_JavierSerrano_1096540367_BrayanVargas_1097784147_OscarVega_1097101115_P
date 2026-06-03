@@ -1,7 +1,7 @@
 package org.example.view;
 
 import com.toedter.calendar.JDateChooser;
-import org.example.controller.VacunaAdminController;
+import org.example.service.CitaService;
 import org.example.model.Control_vacunas;
 import org.example.model.Mascotas;
 import org.example.model.Vacunas;
@@ -23,7 +23,6 @@ public class PanelAdminVacunas {
     private JTable tabla;
     private List<Control_vacunas> lista = null;
 
-    private final VacunaAdminController ctrl = new VacunaAdminController();
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
@@ -54,7 +53,9 @@ public class PanelAdminVacunas {
         panel.revalidate(); panel.repaint();
 
         new SwingWorker<List<Control_vacunas>, Void>() {
-            @Override protected List<Control_vacunas> doInBackground() { return ctrl.listarTodas(); }
+            @Override protected List<Control_vacunas> doInBackground() {
+                try { return Control_vacunas.consultarTodosBD(); } catch (Exception e) { return java.util.Collections.emptyList(); }
+            }
             @Override protected void done() {
                 try   { lista = get(); }
                 catch (InterruptedException | ExecutionException e) { lista = Collections.emptyList(); }
@@ -129,7 +130,8 @@ public class PanelAdminVacunas {
         body.setBackground(C[0]); body.setBorder(BorderFactory.createEmptyBorder(24, 28, 28, 28));
 
         // ── Stats ─────────────────────────────────────────────────────
-        List<org.example.model.Citas> sinAsignar = ctrl.listarCitasVacunSinRegistro();
+        List<org.example.model.Citas> sinAsignar;
+        try { sinAsignar = new CitaService().listarCitasVacunSinRegistro(); } catch (Exception e) { sinAsignar = java.util.Collections.emptyList(); }
         long sinVacuna = sinAsignar.size();
 
         JPanel stats = new JPanel(new GridLayout(1, 4, 16, 0)); stats.setBackground(C[0]);
@@ -282,7 +284,7 @@ public class PanelAdminVacunas {
                         "Confirmar eliminación", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
                 if (conf == JOptionPane.YES_OPTION) {
                     try {
-                        ctrl.eliminarConCancelacion(cv, panel);
+                        new CitaService().eliminarVacunaConCancelacion(cv);
                         JOptionPane.showMessageDialog(panel,
                                 "Vacuna eliminada" + (cv.getMascota() != null ? " y cita cancelada si existia." : "."),
                                 "Listo", JOptionPane.INFORMATION_MESSAGE);
@@ -330,8 +332,8 @@ public class PanelAdminVacunas {
         gbc.insets = new Insets(7, 6, 7, 6);
 
         // Cargar catálogos
-        List<Mascotas> todasMascotas = ctrl.listarMascotas();
-        List<Vacunas>  vacunas       = ctrl.listarVacunas();
+        List<Mascotas> todasMascotas = Mascotas.consultarTodosBD();
+        List<Vacunas>  vacunas       = Vacunas.consultarTodosBD();
         List<org.example.model.Cliente> clientes = org.example.model.Cliente.consultarTodosBD();
 
         // ── Combo de CLIENTE ──────────────────────────────
@@ -480,8 +482,9 @@ public class PanelAdminVacunas {
             cv.setProximaDosis(dProx != null ? dProx.toInstant().atZone(ZoneId.systemDefault()).toLocalDate() : null);
 
             try {
-                if (editando) ctrl.actualizar(cv);
-                else          ctrl.guardar(cv);
+                CitaService svc = new CitaService();
+                if (editando) svc.actualizarVacuna(cv);
+                else          svc.guardarVacuna(cv);
                 dialog.dispose();
                 recargar();
 

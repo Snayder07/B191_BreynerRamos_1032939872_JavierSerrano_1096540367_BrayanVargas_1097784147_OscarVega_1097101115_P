@@ -1,6 +1,6 @@
 package org.example.view;
 
-import org.example.controller.CitaAdminController;
+import org.example.service.CitaService;
 import org.example.model.Citas;
 import org.example.model.Cliente;
 
@@ -20,7 +20,6 @@ import java.util.Locale;
 public class PanelCliente {
     public JPanel panel;
 
-    private final CitaAdminController ctrl = new CitaAdminController();
     private List<Citas> cachedCitas = null;
 
     private final Color[] CLARO = {
@@ -63,7 +62,7 @@ public class PanelCliente {
         new SwingWorker<List<Citas>, Void>() {
             @Override protected List<Citas> doInBackground() {
                 if (Main.clienteActual == null) return Collections.emptyList();
-                return ctrl.listarPorCliente(Main.clienteActual.getId());
+                return Citas.consultarPorClienteBD(Main.clienteActual.getId());
             }
             @Override protected void done() {
                 try { cachedCitas = get(); }
@@ -403,7 +402,12 @@ public class PanelCliente {
                         int conf = JOptionPane.showConfirmDialog(panel,
                                 "¿Cancelar esta cita?", "Confirmar", JOptionPane.YES_NO_OPTION);
                         if (conf == JOptionPane.YES_OPTION) {
-                            ctrl.cancelarCita(idCita, panel);
+                            try {
+                                new CitaService().cancelarCita(idCita);
+                                JOptionPane.showMessageDialog(panel, "Cita cancelada correctamente.");
+                            } catch (Exception ex) {
+                                JOptionPane.showMessageDialog(panel, "Error al cancelar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                            }
                             cachedCitas = null;
                             construir();
                         }

@@ -1,6 +1,5 @@
 package org.example.view;
 
-import org.example.controller.InventarioController;
 import org.example.model.Productos;
 
 import javax.swing.*;
@@ -18,7 +17,6 @@ import javax.imageio.ImageIO;
 public class PanelAdminInventario {
     public JPanel panel;
 
-    private final InventarioController ctrl = new InventarioController();
 
     private final Color[] CLARO = {
             new Color(240,253,244),new Color(22,101,52),Color.WHITE,new Color(34,120,70),
@@ -42,7 +40,7 @@ public class PanelAdminInventario {
     private JLabel lbl(String t,int sz,int st,Color c){JLabel l=new JLabel(t);l.setFont(new Font("Arial",st,sz+2));l.setForeground(c);return l;}
 
     private JPanel crearContenido() {
-        List<Productos> lista = ctrl.listarTodos();
+        List<Productos> lista = Productos.consultarTodosBD();
         long total     = lista.size();
         long stockBajo = 0;
         for (Productos p : lista) { if (p.getStock() != null && p.getStock() < 10) stockBajo++; }
@@ -247,7 +245,10 @@ public class PanelAdminInventario {
                         int ok = JOptionPane.showConfirmDialog(panel,
                                 "¿Eliminar \"" + prod.getNombre() + "\" del inventario?",
                                 "Confirmar", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-                        if (ok == JOptionPane.YES_OPTION) { ctrl.eliminarProducto(prod.getId(), panel); construir(); }
+                        if (ok == JOptionPane.YES_OPTION) {
+                            try { Productos p = new Productos(); p.setId(prod.getId()); p.eliminarBD(); construir(); }
+                            catch (Exception ex) { JOptionPane.showMessageDialog(panel, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE); }
+                        }
                     }
                 });
                 pnl.add(btnE); pnl.add(btnD);
@@ -405,10 +406,23 @@ public class PanelAdminInventario {
         btnGuardar.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                boolean ok = ctrl.agregarProducto(
-                        tfNombre.getText(), tfTipo.getText(),
-                        tfMarca.getText(), tfPrecio.getText(),
-                        tfStock.getText(), fotoBytes[0], panel);
+                boolean ok = false;
+                try {
+                    String nom = tfNombre.getText().trim(), pre = tfPrecio.getText().trim(), sto = tfStock.getText().trim();
+                    if (nom.isEmpty()) throw new Exception("El nombre del producto es obligatorio.");
+                    if (pre.isEmpty()) throw new Exception("El precio es obligatorio.");
+                    if (sto.isEmpty()) throw new Exception("El stock es obligatorio.");
+                    Productos p = new Productos();
+                    p.setNombre(nom);
+                    p.setTipo(tfTipo.getText().trim().isEmpty() ? null : tfTipo.getText().trim());
+                    p.setMarca(tfMarca.getText().trim().isEmpty() ? null : tfMarca.getText().trim());
+                    try { p.setPrecio(new java.math.BigDecimal(pre)); } catch (NumberFormatException nfe) { throw new Exception("El precio debe ser un numero valido."); }
+                    try { p.setStock(Integer.parseInt(sto)); } catch (NumberFormatException nfe) { throw new Exception("El stock debe ser un numero entero."); }
+                    if (fotoBytes[0] != null) p.setFoto(fotoBytes[0]);
+                    p.insertarBD();
+                    JOptionPane.showMessageDialog(panel, "Producto agregado exitosamente.");
+                    ok = true;
+                } catch (Exception ex) { JOptionPane.showMessageDialog(panel, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE); }
                 if (ok) { dlg.dispose(); recargar(); }
             }
         });
@@ -587,7 +601,9 @@ public class PanelAdminInventario {
                     prod.setPrecio(new java.math.BigDecimal(tfPrecio.getText().trim()));
                     prod.setStock(Integer.parseInt(tfStock.getText().trim()));
                     prod.setFoto(fotoBytes[0]);
-                    boolean ok = ctrl.actualizarProducto(prod, panel);
+                    prod.actualizarBD();
+                    JOptionPane.showMessageDialog(panel, "Producto actualizado exitosamente.");
+                    boolean ok = true;
                     if (ok) { dlg.dispose(); recargar(); }
                 } catch (NumberFormatException ex) {
                     JOptionPane.showMessageDialog(dlg,"Precio y stock deben ser números válidos.","Error",JOptionPane.ERROR_MESSAGE);

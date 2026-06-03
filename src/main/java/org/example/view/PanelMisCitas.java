@@ -1,6 +1,6 @@
 package org.example.view;
 
-import org.example.controller.CitaAdminController;
+import org.example.service.CitaService;
 import org.example.model.Citas;
 
 import javax.swing.*;
@@ -15,7 +15,6 @@ public class PanelMisCitas {
     public JPanel panel;
     private String filtroEstado = null;
 
-    private final CitaAdminController ctrl = new CitaAdminController();
 
     private final Color[] CLARO = {
             new Color(240, 246, 252), new Color(26,  74,  122), Color.WHITE,
@@ -216,7 +215,7 @@ public class PanelMisCitas {
         cuerpo.add(filtros, BorderLayout.NORTH);
 
         List<Citas> todasCitas = Main.clienteActual != null
-                ? ctrl.listarPorCliente(Main.clienteActual.getId())
+                ? Citas.consultarPorClienteBD(Main.clienteActual.getId())
                 : Collections.emptyList();
 
         List<Citas> citas = new java.util.ArrayList<>();
@@ -285,7 +284,12 @@ public class PanelMisCitas {
                         int confirm = JOptionPane.showConfirmDialog(panel,
                                 "¿Cancelar esta cita?", "Confirmar", JOptionPane.YES_NO_OPTION);
                         if (confirm == JOptionPane.YES_OPTION) {
-                            ctrl.cancelarCita(idCita, panel);
+                            try {
+                                new CitaService().cancelarCita(idCita);
+                                JOptionPane.showMessageDialog(panel, "Cita cancelada correctamente.");
+                            } catch (Exception ex) {
+                                JOptionPane.showMessageDialog(panel, "Error al cancelar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                            }
                             construir();
                         }
                     }

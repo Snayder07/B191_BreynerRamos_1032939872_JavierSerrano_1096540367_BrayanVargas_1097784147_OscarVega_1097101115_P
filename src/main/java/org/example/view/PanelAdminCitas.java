@@ -1,7 +1,6 @@
 package org.example.view;
 
-import org.example.controller.CitaAdminController;
-import org.example.controller.VacunaAdminController;
+import org.example.service.CitaService;
 import org.example.model.Cita_servicio;
 import org.example.model.Citas;
 import org.example.model.Control_vacunas;
@@ -23,8 +22,6 @@ public class PanelAdminCitas {
     private String filtroActual = "Todas";
     private List<Citas> cachedTodas = null;
 
-    private final CitaAdminController    ctrl        = new CitaAdminController();
-    private final VacunaAdminController  vacunaCtrl  = new VacunaAdminController();
 
     private final Color[] CLARO = {
             new Color(240,253,244), new Color(22,101,52),   Color.WHITE,
@@ -60,7 +57,7 @@ public class PanelAdminCitas {
 
         new SwingWorker<List<Citas>, Void>() {
             @Override protected List<Citas> doInBackground() {
-                return ctrl.listarTodas();
+                return Citas.consultarTodosBD();
             }
             @Override protected void done() {
                 try { cachedTodas = get(); }
@@ -348,13 +345,13 @@ public class PanelAdminCitas {
     //  DIALOGO REGISTRO DE VACUNA desde confirmación de cita
     // ════════════════════════════════════════════════════════
     private void abrirDialogoRegistrarVacuna(Citas cita) {
-        java.util.List<Vacunas> vacunas = vacunaCtrl.listarVacunas();
+        java.util.List<Vacunas> vacunas = Vacunas.consultarTodosBD();
         if (vacunas.isEmpty()) return;
 
         // Verificar si el cliente ya especifico una vacuna al agendar
         Control_vacunas preRegistro = null;
         if (cita.getMascota() != null && cita.getFechaCita() != null) {
-            for (Control_vacunas cv : vacunaCtrl.listarTodas()) {
+            for (Control_vacunas cv : Control_vacunas.consultarTodosBD()) {
                 if (cv.getMascota() != null
                         && cv.getMascota().getId().equals(cita.getMascota().getId())
                         && cita.getFechaCita().equals(cv.getFechaAplicacion())) {
@@ -473,7 +470,7 @@ public class PanelAdminCitas {
                 cv.setFechaAplicacion(cita.getFechaCita());
                 cv.setProximaDosis(null);
                 try {
-                    vacunaCtrl.guardar(cv);
+                    new CitaService().guardarVacuna(cv);
                     JOptionPane.showMessageDialog(dialog,
                             "Vacuna registrada. Aparecerá como Pendiente hasta que el cliente sea atendido.",
                             "Vacuna registrada", JOptionPane.INFORMATION_MESSAGE);
@@ -587,7 +584,7 @@ public class PanelAdminCitas {
                             "Confirmar cita", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 
                     if (respuesta == JOptionPane.YES_OPTION) {
-                        ctrl.confirmarCita(cita.getId(), panel);
+                        new CitaService().confirmarCita(cita.getId());
                         cachedTodas = null; construir();
                         Main.recargarPanelAdmin();
                         boolean esVacunacion = (cita.getMotivo() != null &&
@@ -622,7 +619,7 @@ public class PanelAdminCitas {
                             "Cancelar cita", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 
                     if (respuesta == JOptionPane.YES_OPTION) {
-                        ctrl.cancelarCita(cita.getId(), panel);
+                        new CitaService().cancelarCita(cita.getId());
                         cachedTodas = null; construir();
                         Main.recargarPanelAdmin();
                     }

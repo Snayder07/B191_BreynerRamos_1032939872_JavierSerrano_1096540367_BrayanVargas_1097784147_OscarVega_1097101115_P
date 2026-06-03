@@ -1,6 +1,5 @@
 package org.example.view;
 
-import org.example.controller.InventarioController;
 import org.example.model.Productos;
 
 import javax.imageio.ImageIO;
@@ -166,8 +165,7 @@ public class PanelAlimentos {
         cuerpo.setBorder(BorderFactory.createEmptyBorder(24,28,28,28));
 
         // Cargar productos desde la base de datos
-        InventarioController ctrl = new InventarioController();
-        List<Productos> lista = ctrl.listarTodos();
+        List<Productos> lista = Productos.consultarTodosBD();
 
         // Paleta de colores para tipos de producto
         Color[] paleta = {

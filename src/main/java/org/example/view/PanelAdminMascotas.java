@@ -1,7 +1,7 @@
 package org.example.view;
 
 import com.toedter.calendar.JDateChooser;
-import org.example.controller.MascotaAdminController;
+import org.example.service.MascotaService;
 import org.example.model.Cliente;
 import org.example.model.Especies;
 import org.example.model.Mascotas;
@@ -15,7 +15,6 @@ import java.util.List;
 
 public class PanelAdminMascotas {
     public JPanel panel;
-    private final MascotaAdminController ctrl = new MascotaAdminController();
 
     private final Color[] CLARO = {
             new Color(240,253,244),new Color(22,101,52),Color.WHITE,new Color(34,120,70),
@@ -74,7 +73,7 @@ public class PanelAdminMascotas {
 
         JPanel body = new JPanel(new BorderLayout(0,16)); body.setBackground(C[0]); body.setBorder(BorderFactory.createEmptyBorder(24,28,28,28));
 
-        List<Mascotas> todas = ctrl.listarTodas();
+        List<Mascotas> todas = Mascotas.consultarTodosBD();
         long total  = todas.size();
         long perros = 0;
         for (Mascotas m : todas) { if (m.getEspecie()!=null && m.getEspecie().getNombre().equalsIgnoreCase("Perro")) perros++; }
@@ -153,7 +152,7 @@ public class PanelAdminMascotas {
         JTextField tfNombre = campo(); form.add(tfNombre); form.add(Box.createVerticalStrut(14));
 
         form.add(campLbl("Especie *"));
-        List<Especies> especies = ctrl.listarEspecies();
+        List<Especies> especies = Especies.consultarTodosBD();
         JComboBox<Especies> cbEspecie = new JComboBox<>();
         cbEspecie.addItem(null);
         for (Especies esp : especies) cbEspecie.addItem(esp);
@@ -167,7 +166,7 @@ public class PanelAdminMascotas {
         estilizarCombo(cbEspecie); form.add(cbEspecie); form.add(Box.createVerticalStrut(14));
 
         form.add(campLbl("Dueño *"));
-        List<Cliente> clientes = ctrl.listarClientes();
+        List<Cliente> clientes = Cliente.consultarTodosBD();
         JComboBox<Cliente> cbCliente = new JComboBox<>();
         cbCliente.addItem(null);
         for (Cliente cl : clientes) cbCliente.addItem(cl);
@@ -245,31 +244,28 @@ public class PanelAdminMascotas {
                     java.text.SimpleDateFormat sdf2 = new java.text.SimpleDateFormat("yyyy-MM-dd");
                     fechaReg = sdf2.format(dcFecha.getDate());
                 }
-                boolean ok = ctrl.registrarMascota(
-                        tfNombre.getText(), esp, cl,
-                        fechaReg, (sexo==null||sexo.isBlank())?null:sexo,
-                        tfCar.getText(), form,
-                        new Runnable() {
-                            @Override
-                            public void run() {
-                                tfCar.setBorder(BorderFactory.createCompoundBorder(
-                                        BorderFactory.createLineBorder(bordeError, 2),
-                                        BorderFactory.createEmptyBorder(8,10,8,10)));
-                                lblError.setText("⚠ Este campo es obligatorio para distinguir la mascota");
-                                lblError.setVisible(true);
-                                tfCar.requestFocusInWindow();
-                                form.revalidate();
-                            }
-                        });
-                if (ok) {
+                try {
+                    new MascotaService().registrarMascota(
+                            tfNombre.getText(), esp, cl,
+                            fechaReg, (sexo==null||sexo.isBlank())?null:sexo,
+                            tfCar.getText());
+                    JOptionPane.showMessageDialog(form, "Mascota registrada exitosamente.");
                     dlg.dispose();
                     recargar();
                     int resp = JOptionPane.showConfirmDialog(panel,
-                        "Mascota registrada.\n¿Deseas ir a registrar las vacunas de " + tfNombre.getText().trim() + " ahora?",
+                        "¿Deseas ir a registrar las vacunas de " + tfNombre.getText().trim() + " ahora?",
                         "Registrar vacunas", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-                    if (resp == JOptionPane.YES_OPTION) {
-                        Main.cambiarPantalla("adminVacunas");
-                    }
+                    if (resp == JOptionPane.YES_OPTION) Main.cambiarPantalla("adminVacunas");
+                } catch (MascotaService.NecesitaCaracteristicaException ex) {
+                    JOptionPane.showMessageDialog(form, ex.getMessage(), "Campo requerido", JOptionPane.WARNING_MESSAGE);
+                    tfCar.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(bordeError, 2), BorderFactory.createEmptyBorder(8,10,8,10)));
+                    lblError.setText("⚠ Este campo es obligatorio para distinguir la mascota");
+                    lblError.setVisible(true);
+                    tfCar.requestFocusInWindow();
+                    form.revalidate();
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(form, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         });
@@ -320,7 +316,7 @@ public class PanelAdminMascotas {
         JTextField tfNomMas = campo(); form.add(tfNomMas); form.add(Box.createVerticalStrut(10));
 
         form.add(campLbl("Especie *"));
-        List<Especies> especies = ctrl.listarEspecies();
+        List<Especies> especies = Especies.consultarTodosBD();
         JComboBox<Especies> cbEspecie = new JComboBox<>();
         cbEspecie.addItem(null);
         for (Especies esp : especies) cbEspecie.addItem(esp);
@@ -410,20 +406,19 @@ public class PanelAdminMascotas {
                         java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
                         fechaStr = sdf.format(dcFechaMas.getDate());
                     }
-                    boolean ok = ctrl.registrarMascota(
+                    new MascotaService().registrarMascota(
                             nomMas, esp, guardado,
                             fechaStr, (sexo==null||sexo.isBlank())?null:sexo,
-                            tfCar.getText(), form, null);
-                    if (ok) {
-                        dlg.dispose();
-                        recargar();
-                        JOptionPane.showMessageDialog(panel,
-                                "Cliente \"" + nomCli + "\" y mascota \"" + nomMas + "\" registrados correctamente.\n" +
-                                "Contrasena generada: puede iniciar sesion con su correo.",
-                                "Registro exitoso", JOptionPane.INFORMATION_MESSAGE);
-                    } else {
-                        btnGuardar.setEnabled(true);
-                    }
+                            tfCar.getText());
+                    dlg.dispose();
+                    recargar();
+                    JOptionPane.showMessageDialog(panel,
+                            "Cliente \"" + nomCli + "\" y mascota \"" + nomMas + "\" registrados correctamente.\n" +
+                            "Contrasena generada: puede iniciar sesion con su correo.",
+                            "Registro exitoso", JOptionPane.INFORMATION_MESSAGE);
+                } catch (MascotaService.NecesitaCaracteristicaException ex) {
+                    JOptionPane.showMessageDialog(dlg, ex.getMessage(), "Campo requerido", JOptionPane.WARNING_MESSAGE);
+                    btnGuardar.setEnabled(true);
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(dlg, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                     btnGuardar.setEnabled(true);

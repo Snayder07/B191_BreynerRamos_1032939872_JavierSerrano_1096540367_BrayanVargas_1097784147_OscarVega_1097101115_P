@@ -1,8 +1,7 @@
 package org.example.view;
 
 import com.toedter.calendar.JDateChooser;
-import org.example.controller.AgendarCitaController;
-import org.example.controller.VacunaAdminController;
+import org.example.service.CitaService;
 import org.example.model.Control_vacunas;
 import org.example.model.Empleados;
 import org.example.model.Mascotas;
@@ -20,7 +19,6 @@ import java.util.List;
 public class PanelAgendarCita {
     public JPanel panel;
 
-    private final AgendarCitaController ctrl = new AgendarCitaController();
 
     private final Color[] CLARO = {
             new Color(240, 246, 252), new Color(26,  74,  122), Color.WHITE,
@@ -214,7 +212,7 @@ public class PanelAgendarCita {
         cbMascota.setBackground(C[2]); cbMascota.setForeground(C[6]);
         cbMascota.setBorder(BorderFactory.createLineBorder(C[9], 1));
         cbMascota.addItem(null);
-        List<Mascotas> todasMascotas = ctrl.listarMascotas();
+        List<Mascotas> todasMascotas = Mascotas.consultarTodosBD();
         for (Mascotas m : todasMascotas) {
             // Solo mostrar mascotas del cliente logueado
             if (Main.clienteActual != null && m.getCliente() != null &&
@@ -242,7 +240,7 @@ public class PanelAgendarCita {
         cbServicio.setBackground(C[2]); cbServicio.setForeground(C[6]);
         cbServicio.setBorder(BorderFactory.createLineBorder(C[9], 1));
         cbServicio.addItem(null);
-        List<Servicio> servicios = ctrl.listarServicios();
+        List<Servicio> servicios = Servicio.consultarTodosBD();
         for (Servicio s : servicios) cbServicio.addItem(s);
         cbServicio.setRenderer(new DefaultListCellRenderer() {
             public Component getListCellRendererComponent(JList<?> list, Object value,
@@ -259,7 +257,7 @@ public class PanelAgendarCita {
         form.add(cbServicio); form.add(Box.createVerticalStrut(16));
 
         // ── Panel vacuna (aparece solo si el servicio es vacunacion) ──
-        List<Vacunas> listaVacunas = new VacunaAdminController().listarVacunas();
+        List<Vacunas> listaVacunas = Vacunas.consultarTodosBD();
         JPanel panelVacuna = new JPanel();
         panelVacuna.setLayout(new BoxLayout(panelVacuna, BoxLayout.Y_AXIS));
         panelVacuna.setBackground(C[2]);
@@ -465,7 +463,7 @@ public class PanelAgendarCita {
                 String hora = (String) cbHora.getSelectedItem();
 
                 // El veterinario se asigna automáticamente (primer disponible)
-                List<Empleados> vets = ctrl.listarVeterinarios();
+                List<Empleados> vets = Empleados.consultarTodosBD();
                 if (vets.isEmpty()) {
                     JOptionPane.showMessageDialog(panel,
                             "No hay veterinarios disponibles.",
@@ -478,7 +476,12 @@ public class PanelAgendarCita {
                 Servicio servicioSel = (cbServicio.getSelectedItem() instanceof Servicio)
                         ? (Servicio) cbServicio.getSelectedItem() : null;
                 String motivoStr = servicioSel != null ? servicioSel.getNombre() : null;
-                boolean ok = ctrl.guardarCita(mascota, empleado, fechaStr, hora, domicilio, motivoStr, panel);
+                boolean ok = false;
+                try {
+                    ok = new CitaService().agendarCita(mascota, empleado, fechaStr, hora, domicilio, motivoStr);
+                    if (ok) JOptionPane.showMessageDialog(panel, "Cita agendada y confirmada!", "Cita confirmada", JOptionPane.INFORMATION_MESSAGE);
+                    else JOptionPane.showMessageDialog(panel, "Tu cita fue registrada en lista de espera.", "En lista de espera", JOptionPane.INFORMATION_MESSAGE);
+                } catch (Exception ex) { JOptionPane.showMessageDialog(panel, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE); }
                 if (ok) {
                     // Si el cliente especifico una vacuna, registrarla como pendiente
                     if (cbVacuna.getSelectedItem() instanceof Vacunas && panelVacuna.isVisible()) {

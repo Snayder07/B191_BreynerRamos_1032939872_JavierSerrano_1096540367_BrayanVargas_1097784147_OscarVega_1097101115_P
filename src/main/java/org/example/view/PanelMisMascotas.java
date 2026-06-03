@@ -1,7 +1,7 @@
 package org.example.view;
 
 import com.toedter.calendar.JDateChooser;
-import org.example.controller.MascotaAdminController;
+import org.example.service.MascotaService;
 import org.example.model.Cliente;
 import org.example.model.Especies;
 import org.example.model.Mascotas;
@@ -17,7 +17,6 @@ import java.util.List;
 public class PanelMisMascotas {
     public JPanel panel;
 
-    private final MascotaAdminController ctrl = new MascotaAdminController();
 
     private final Color[] CLARO = {
             new Color(240,246,252), new Color(26,74,122),   Color.WHITE,
@@ -191,7 +190,7 @@ public class PanelMisMascotas {
         cuerpo.setBackground(C[0]);
         cuerpo.setBorder(BorderFactory.createEmptyBorder(24,28,28,28));
 
-        List<Mascotas> todas = ctrl.listarTodas();
+        List<Mascotas> todas = Mascotas.consultarTodosBD();
         JPanel lista = new JPanel();
         lista.setLayout(new BoxLayout(lista, BoxLayout.Y_AXIS));
         lista.setBackground(C[0]);
@@ -254,7 +253,8 @@ public class PanelMisMascotas {
                                 "¿Eliminar esta mascota? Esta acción no se puede deshacer.",
                                 "Confirmar", JOptionPane.YES_NO_OPTION);
                         if (confirm == JOptionPane.YES_OPTION) {
-                            ctrl.eliminarMascota(idMascota, panel);
+                            try { Mascotas m = new Mascotas(); m.setId(idMascota); m.eliminarBD(); JOptionPane.showMessageDialog(panel, "Mascota eliminada exitosamente."); }
+                            catch (Exception ex) { JOptionPane.showMessageDialog(panel, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE); }
                             construir();
                         }
                     }
@@ -321,7 +321,7 @@ public class PanelMisMascotas {
         JComboBox<Especies> cbEspecie = new JComboBox<>();
         cbEspecie.setFont(new Font("Arial",Font.PLAIN,13));
         cbEspecie.setMaximumSize(new Dimension(Integer.MAX_VALUE,46));
-        List<Especies> especies = ctrl.listarEspecies();
+        List<Especies> especies = Especies.consultarTodosBD();
         for (Especies esp : especies) {
             cbEspecie.addItem(esp);
             if (mascota.getEspecie() != null && esp.getId().equals(mascota.getEspecie().getId()))
@@ -387,7 +387,8 @@ public class PanelMisMascotas {
                     nuevaFecha = java.time.LocalDate.of(cal.get(java.util.Calendar.YEAR),
                             cal.get(java.util.Calendar.MONTH)+1, cal.get(java.util.Calendar.DAY_OF_MONTH));
                 }
-                ctrl.actualizarMascota(mascota, nuevoNombre, nuevaEspecie, nuevaFecha, nuevoSexo, panel);
+                try { new MascotaService().actualizarMascota(mascota, nuevoNombre, nuevaEspecie, nuevaFecha, nuevoSexo); JOptionPane.showMessageDialog(panel, "Mascota actualizada correctamente."); }
+                catch (Exception ex) { JOptionPane.showMessageDialog(panel, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE); }
                 dlg.dispose();
                 construir();
             }
@@ -462,7 +463,7 @@ public class PanelMisMascotas {
         cbEspecie.setFont(new Font("Arial", Font.PLAIN, 13));
         cbEspecie.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
         cbEspecie.setAlignmentX(Component.LEFT_ALIGNMENT);
-        List<Especies> especies = ctrl.listarEspecies();
+        List<Especies> especies = Especies.consultarTodosBD();
         for (Especies esp : especies) cbEspecie.addItem(esp);
         cbEspecie.addItem("Otro...");
         cbEspecie.setRenderer(new DefaultListCellRenderer() {
@@ -605,7 +606,7 @@ public class PanelMisMascotas {
                                 "Campo vacío", JOptionPane.WARNING_MESSAGE);
                         return;
                     }
-                    especie = ctrl.obtenerOCrearEspecie(nombreOtra);
+                    especie = new MascotaService().obtenerOCrearEspecie(nombreOtra);
                     if (especie == null) {
                         JOptionPane.showMessageDialog(dlg, "No se pudo guardar la especie. Intenta de nuevo.",
                                 "Error", JOptionPane.ERROR_MESSAGE);
@@ -620,23 +621,21 @@ public class PanelMisMascotas {
                     fecha = new SimpleDateFormat("yyyy-MM-dd").format(dateChooser.getDate());
                 }
 
-                boolean ok = ctrl.registrarMascota(nombre, especie, cliente, fecha, sexo,
-                        tfCaracteristica.getText(), panel,
-                        new Runnable() {
-                            @Override
-                            public void run() {
-                                tfCaracteristica.setBorder(BorderFactory.createCompoundBorder(
-                                        BorderFactory.createLineBorder(bordeError, 2),
-                                        BorderFactory.createEmptyBorder(6, 10, 6, 10)));
-                                lblCarError.setText("⚠ Obligatorio para distinguir esta mascota");
-                                lblCarError.setVisible(true);
-                                tfCaracteristica.requestFocusInWindow();
-                                form.revalidate();
-                            }
-                        });
-                if (ok) {
+                try {
+                    new MascotaService().registrarMascota(nombre, especie, cliente, fecha, sexo, tfCaracteristica.getText());
+                    JOptionPane.showMessageDialog(panel, "Mascota registrada exitosamente.");
                     dlg.dispose();
                     construir();
+                } catch (MascotaService.NecesitaCaracteristicaException ex) {
+                    JOptionPane.showMessageDialog(panel, ex.getMessage(), "Campo requerido", JOptionPane.WARNING_MESSAGE);
+                    tfCaracteristica.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(bordeError, 2), BorderFactory.createEmptyBorder(6,10,6,10)));
+                    lblCarError.setText("⚠ Obligatorio para distinguir esta mascota");
+                    lblCarError.setVisible(true);
+                    tfCaracteristica.requestFocusInWindow();
+                    form.revalidate();
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(panel, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         });

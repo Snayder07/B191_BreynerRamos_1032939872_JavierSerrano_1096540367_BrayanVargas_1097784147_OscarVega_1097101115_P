@@ -5,10 +5,6 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
-import org.example.controller.CitaAdminController;
-import org.example.controller.InventarioController;
-import org.example.controller.MascotaAdminController;
-import org.example.controller.VacunaAdminController;
 import org.example.model.*;
 
 import javax.swing.*;
@@ -24,10 +20,6 @@ import java.util.List;
 public class PanelAdminReportes {
     public JPanel panel;
 
-    private final CitaAdminController    citaCtrl    = new CitaAdminController();
-    private final VacunaAdminController  vacunaCtrl  = new VacunaAdminController();
-    private final InventarioController   invCtrl     = new InventarioController();
-    private final MascotaAdminController mascotaCtrl = new MascotaAdminController();
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
@@ -54,8 +46,8 @@ public class PanelAdminReportes {
 
     private JPanel crearContenido() {
         // ── Cargar datos de BD ────────────────────────────────────────
-        List<Citas>          citas    = citaCtrl.listarTodas();
-        List<Control_vacunas> vacunas = vacunaCtrl.listarTodas();
+        List<Citas>          citas    = Citas.consultarTodosBD();
+        List<Control_vacunas> vacunas = Control_vacunas.consultarTodosBD();
         List<Cliente>         clientes = Cliente.consultarTodosBD();
         long completadas = 0;
         for (Citas ci : citas) { if (EstadoCita.COMPLETADA.equals(ci.getEstadoCita())) completadas++; }
@@ -169,7 +161,7 @@ public class PanelAdminReportes {
 
     // ── Reporte de citas ─────────────────────────────────────────────────
     private void generarReporteCitas(File archivo) throws IOException {
-        List<Citas> citas = citaCtrl.listarTodas();
+        List<Citas> citas = Citas.consultarTodosBD();
         String[] cols = {"Mascota","Dueno","Veterinario","Fecha","Hora","Estado"};
         float[]  anchos = {101, 101, 101, 76, 50, 76};  // suma=505 = ancho util A4
 
@@ -190,7 +182,7 @@ public class PanelAdminReportes {
 
     // ── Reporte de vacunas ───────────────────────────────────────────────
     private void generarReporteVacunas(File archivo) throws IOException {
-        List<Control_vacunas> lista = vacunaCtrl.listarTodas();
+        List<Control_vacunas> lista = Control_vacunas.consultarTodosBD();
         String[] cols = {"Mascota","Dueno","Vacuna","Fecha aplic.","Prox. fecha","Estado"};
         float[]  anchos = {91, 101, 101, 76, 76, 61};  // suma=506 = ancho util A4
 
@@ -211,7 +203,7 @@ public class PanelAdminReportes {
 
     // ── Reporte de mascotas ──────────────────────────────────────────────
     private void generarReporteMascotas(File archivo) throws IOException {
-        List<Mascotas> lista = mascotaCtrl.listarTodas();
+        List<Mascotas> lista = Mascotas.consultarTodosBD();
         String[] cols = {"Nombre","Especie","Caracteristica","Dueno","Fecha nac.","Sexo"};
         float[]  anchos = {87, 70, 116, 104, 75, 52};  // suma=504 = ancho util A4
 
@@ -232,7 +224,7 @@ public class PanelAdminReportes {
 
     // ── Reporte de inventario ────────────────────────────────────────────
     private void generarReporteInventario(File archivo) throws IOException {
-        List<Productos> lista = invCtrl.listarTodos();
+        List<Productos> lista = Productos.consultarTodosBD();
         String[] cols = {"Producto","Tipo","Marca","Precio","Stock","Estado"};
         float[]  anchos = {158, 76, 76, 76, 50, 69};  // suma=505 = ancho util A4
 
@@ -271,11 +263,11 @@ public class PanelAdminReportes {
 
     // ── Reporte general ──────────────────────────────────────────────────
     private void generarReporteGeneral(File archivo) throws IOException {
-        List<Citas>           citas    = citaCtrl.listarTodas();
-        List<Control_vacunas> vacunas  = vacunaCtrl.listarTodas();
+        List<Citas>           citas    = Citas.consultarTodosBD();
+        List<Control_vacunas> vacunas  = Control_vacunas.consultarTodosBD();
         List<Cliente>         clientes = Cliente.consultarTodosBD();
-        List<Mascotas>        mascotas = mascotaCtrl.listarTodas();
-        List<Productos>       prods    = invCtrl.listarTodos();
+        List<Mascotas>        mascotas = Mascotas.consultarTodosBD();
+        List<Productos>       prods    = Productos.consultarTodosBD();
         long completadas = 0;
         for (Citas ci : citas) { if (EstadoCita.COMPLETADA.equals(ci.getEstadoCita())) completadas++; }
         long canceladas = 0;

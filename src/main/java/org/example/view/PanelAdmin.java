@@ -1,8 +1,7 @@
 package org.example.view;
 
 import com.toedter.calendar.JDateChooser;
-import org.example.controller.CitaAdminController;
-import org.example.controller.VacunaAdminController;
+import org.example.service.CitaService;
 import org.example.model.Citas;
 import org.example.model.Control_vacunas;
 import org.example.model.EstadoCita;
@@ -26,8 +25,6 @@ import java.util.Locale;
 public class PanelAdmin {
     public JPanel panel;
 
-    private final CitaAdminController    citaCtrl         = new CitaAdminController();
-    private final VacunaAdminController  vacunaCtrl       = new VacunaAdminController();
 
     private List<Citas> cachedCitasHoy      = null;
     private List<Citas> cachedCitasVacunas  = null;
@@ -69,8 +66,8 @@ public class PanelAdmin {
             private List<Citas> hoy;
             private List<Citas> vacunas;
             @Override protected Void doInBackground() {
-                hoy     = citaCtrl.listarDeHoy();
-                vacunas = citaCtrl.listarCitasVacunas();
+                hoy     = Citas.consultarDeHoyBD();
+                vacunas = Citas.consultarVacunasBD();
                 return null;
             }
             @Override protected void done() {
@@ -521,7 +518,7 @@ public class PanelAdmin {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(7, 6, 7, 6);
 
-        List<Vacunas> vacunas = vacunaCtrl.listarVacunas();
+        List<Vacunas> vacunas = Vacunas.consultarTodosBD();
 
         String nombreMascota = mascota.getNombre()
                 + (mascota.getCliente() != null ? " (" + mascota.getCliente().getNombre() + ")" : "");
@@ -588,7 +585,7 @@ public class PanelAdmin {
                 cv.setFechaAplicacion(dAplic.toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
                 cv.setProximaDosis(dProx != null ? dProx.toInstant().atZone(ZoneId.systemDefault()).toLocalDate() : null);
                 try {
-                    vacunaCtrl.guardar(cv);
+                    new CitaService().guardarVacuna(cv);
                     JOptionPane.showMessageDialog(dialog, "Vacuna registrada correctamente.");
                     dialog.dispose();
                 } catch (Exception ex) {
@@ -653,8 +650,8 @@ public class PanelAdmin {
 
         List<Citas> citasHoy;
         List<Citas> citasVacunas;
-        try { citasHoy      = citaCtrl.listarDeHoy();          } catch (Exception e) { citasHoy      = Collections.emptyList(); }
-        try { citasVacunas  = citaCtrl.listarCitasVacunas();   } catch (Exception e) { citasVacunas  = Collections.emptyList(); }
+        try { citasHoy      = Citas.consultarDeHoyBD();          } catch (Exception e) { citasHoy      = Collections.emptyList(); }
+        try { citasVacunas  = Citas.consultarVacunasBD();   } catch (Exception e) { citasVacunas  = Collections.emptyList(); }
         long pendientes = 0;
         for (Citas c : citasVacunas) {
             if (c.getEstadoCita() == EstadoCita.PENDIENTE || c.getEstadoCita() == EstadoCita.CONFIRMADA)

@@ -1,6 +1,6 @@
 package org.example.view;
 
-import org.example.controller.RegistroController;
+import org.example.service.ClienteService;
 
 import javax.swing.*;
 import java.awt.*;
@@ -18,8 +18,6 @@ public class CrearCuenta {
     private JButton registrarButton;
     private JButton volverButton;
 
-    // ── Conectado al RegistroController ──────────────────
-    private final RegistroController registroController = new RegistroController();
 
     public CrearCuenta() {
 
@@ -263,9 +261,15 @@ public class CrearCuenta {
                     return;
                 }
 
-                // ← Llama al RegistroController que guarda en BD
-                registroController.registrar(
-                        nombre, apellido, correo, telefono, pass, confirmar, panel);
+                try {
+                    new ClienteService().registrar(nombre, apellido, correo, telefono, pass, confirmar);
+                    JOptionPane.showMessageDialog(panel,
+                            "Cuenta creada exitosamente. Ya puedes iniciar sesion.",
+                            "Registro exitoso", JOptionPane.INFORMATION_MESSAGE);
+                    Main.cambiarPantalla("login");
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(panel, ex.getMessage(), "Error al registrar", JOptionPane.ERROR_MESSAGE);
+                }
             }
         });
 
