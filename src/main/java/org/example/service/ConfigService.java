@@ -5,9 +5,22 @@ import java.util.Properties;
 
 public class ConfigService {
 
-    private static final File CONFIG_FILE = new File(
-            System.getProperty("user.home"), ".kampets/config.properties"
-    );
+    // ── Atributos propios ─────────────────────────────────────────────────
+    private final File   archivoConfig;   // ruta del archivo donde se guardan las credenciales
+    private final String nombreAplicacion; // nombre que aparece en el archivo de configuracion
+
+    public ConfigService() {
+        this.archivoConfig    = new File(System.getProperty("user.home"), ".kampets/config.properties");
+        this.nombreAplicacion = "Kampets Veterinaria";
+    }
+
+    public File   getArchivoConfig()    { return archivoConfig; }
+    public String getNombreAplicacion() { return nombreAplicacion; }
+
+    // ── Acceso estatico (usa la instancia por defecto) ────────────────────
+    private static final ConfigService INSTANCIA = new ConfigService();
+
+    private static File CONFIG_FILE = INSTANCIA.archivoConfig;
 
     // ── Lectura ──────────────────────────────────────────────────────────
 

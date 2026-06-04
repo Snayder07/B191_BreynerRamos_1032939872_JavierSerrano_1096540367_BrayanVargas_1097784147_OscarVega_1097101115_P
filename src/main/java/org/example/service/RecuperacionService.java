@@ -9,9 +9,24 @@ import java.util.Random;
 
 public class RecuperacionService {
 
-    // Mapa temporal: correo → codigo (valido durante la sesion)
-    private final Map<String, String>  codigosPendientes = new HashMap<>();
-    private final Map<String, Boolean> esEmpleado        = new HashMap<>();
+    // ── Atributos propios ─────────────────────────────────────────────────
+    private final Map<String, String>  codigosPendientes;  // correo → codigo enviado
+    private final Map<String, Boolean> esEmpleado;         // correo → true si es empleado
+    private int longitudCodigo;                            // cantidad de digitos del codigo
+    private int minimoCaracteresContrasena;                // minimo de caracteres para la nueva contrasena
+
+    public RecuperacionService() {
+        this.codigosPendientes         = new HashMap<>();
+        this.esEmpleado                = new HashMap<>();
+        this.longitudCodigo            = 6;
+        this.minimoCaracteresContrasena = 6;
+    }
+
+    public int getLongitudCodigo()                        { return longitudCodigo; }
+    public void setLongitudCodigo(int longitud)           { this.longitudCodigo = longitud; }
+
+    public int getMinimoCaracteresContrasena()            { return minimoCaracteresContrasena; }
+    public void setMinimoCaracteresContrasena(int minimo) { this.minimoCaracteresContrasena = minimo; }
 
     public void enviarCodigoRecuperacion(String correo) throws Exception {
         if (correo == null || correo.trim().isEmpty())
@@ -34,7 +49,9 @@ public class RecuperacionService {
             esEmpleado.put(correoNorm, true);
         }
 
-        String codigo = String.format("%06d", new Random().nextInt(999999));
+        int maxValor = (int) Math.pow(10, longitudCodigo) - 1;
+        String formato = "%0" + longitudCodigo + "d";
+        String codigo = String.format(formato, new Random().nextInt(maxValor));
         codigosPendientes.put(correoNorm, codigo);
         CorreoService.enviarCodigoRecuperacion(correo.trim(), nombre, codigo);
     }
@@ -49,8 +66,8 @@ public class RecuperacionService {
             throw new Exception("La nueva contrasena no puede estar vacia.");
         if (!nueva.equals(confirmar))
             throw new Exception("Las contrasenas no coinciden.");
-        if (nueva.length() < 6)
-            throw new Exception("La contrasena debe tener al menos 6 caracteres.");
+        if (nueva.length() < minimoCaracteresContrasena)
+            throw new Exception("La contrasena debe tener al menos " + minimoCaracteresContrasena + " caracteres.");
 
         String correoNorm = correo.trim().toLowerCase();
         Boolean esEmp = esEmpleado.get(correoNorm);

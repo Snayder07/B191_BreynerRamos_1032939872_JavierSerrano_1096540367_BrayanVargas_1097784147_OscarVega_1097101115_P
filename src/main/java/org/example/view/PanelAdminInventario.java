@@ -98,9 +98,9 @@ public class PanelAdminInventario {
         }
         body.add(stats,BorderLayout.NORTH);
 
-        // ── Tabla de productos ────────────────────────────────
-        String[] cols = {"Foto", "Nombre", "Tipo", "Marca", "Precio", "Stock", "Acciones"};
-        Object[][] filas = new Object[lista.size()][7];
+        // ── Tabla de productos (sin columna de acciones) ──────
+        String[] cols = {"Foto", "Nombre", "Tipo", "Marca", "Precio", "Stock"};
+        Object[][] filas = new Object[lista.size()][6];
         for (int i = 0; i < lista.size(); i++) {
             Productos p = lista.get(i);
             filas[i][0] = p.getFoto();
@@ -109,11 +109,10 @@ public class PanelAdminInventario {
             filas[i][3] = p.getMarca()   != null ? p.getMarca()   : "-";
             filas[i][4] = p.getPrecio()  != null ? "$ " + p.getPrecio().toPlainString() : "-";
             filas[i][5] = p.getStock()   != null ? p.getStock()   : 0;
-            filas[i][6] = p;
         }
 
         javax.swing.table.DefaultTableModel modelo = new javax.swing.table.DefaultTableModel(filas, cols) {
-            @Override public boolean isCellEditable(int r, int c) { return c == 6; }
+            @Override public boolean isCellEditable(int r, int c) { return false; }
             @Override public Class<?> getColumnClass(int c) {
                 if (c == 0) return byte[].class;
                 if (c == 5) return Integer.class;
@@ -129,23 +128,20 @@ public class PanelAdminInventario {
         tabla.setGridColor(C[9]);
         tabla.setShowGrid(true);
         tabla.setSelectionBackground(C[4]);
-        tabla.setFocusable(false);
+        tabla.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        // Header
+        // Encabezado de la tabla
         javax.swing.table.JTableHeader header = tabla.getTableHeader();
         header.setFont(new Font("Arial", Font.BOLD, 12));
         header.setBackground(C[1]);
         header.setForeground(Color.WHITE);
         header.setReorderingAllowed(false);
-        ((javax.swing.table.DefaultTableCellRenderer) header.getDefaultRenderer())
-                .setHorizontalAlignment(SwingConstants.CENTER);
 
-        // Anchos de columna
-        int[] anchos = {58, 180, 110, 110, 110, 70, 150};
+        int[] anchos = {58, 200, 120, 120, 110, 80};
         for (int i = 0; i < anchos.length; i++)
             tabla.getColumnModel().getColumn(i).setPreferredWidth(anchos[i]);
 
-        // ── Renderer foto ────────────────────────────────────
+        // Renderer de la columna Foto
         tabla.getColumnModel().getColumn(0).setCellRenderer(new javax.swing.table.TableCellRenderer() {
             @Override
             public java.awt.Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean foc, int row, int col) {
@@ -169,7 +165,7 @@ public class PanelAdminInventario {
             }
         });
 
-        // ── Renderer stock (color según cantidad) ─────────────
+        // Renderer de la columna Stock (rojo si 0, naranja si bajo, verde si OK)
         tabla.getColumnModel().getColumn(5).setCellRenderer(new javax.swing.table.TableCellRenderer() {
             @Override
             public java.awt.Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean foc, int row, int col) {
@@ -185,91 +181,72 @@ public class PanelAdminInventario {
             }
         });
 
-        // ── Renderer acciones ─────────────────────────────────
-        class AccionRenderer extends JPanel implements javax.swing.table.TableCellRenderer {
-            AccionRenderer() {
-                setLayout(new FlowLayout(FlowLayout.CENTER, 6, 0));
-                setOpaque(true);
-            }
-            @Override
-            public Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean foc, int row, int col) {
-                removeAll();
-                setBackground(sel ? C[4] : C[2]);
-                JButton e = new JButton("Editar");
-                e.setFont(new Font("Arial", Font.BOLD, 11));
-                e.setBackground(new Color(37, 99, 235)); e.setForeground(Color.WHITE);
-                e.setOpaque(true); e.setBorderPainted(false);
-                e.setBorder(BorderFactory.createEmptyBorder(5, 12, 5, 12));
-                JButton d = new JButton("Eliminar");
-                d.setFont(new Font("Arial", Font.BOLD, 11));
-                d.setBackground(new Color(220, 38, 38)); d.setForeground(Color.WHITE);
-                d.setOpaque(true); d.setBorderPainted(false);
-                d.setBorder(BorderFactory.createEmptyBorder(5, 12, 5, 12));
-                add(e); add(d);
-                return this;
-            }
-        }
-
-        class AccionEditor extends javax.swing.DefaultCellEditor {
-            private JPanel pnl = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 0));
-            AccionEditor() {
-                super(new JCheckBox());
-                pnl.setOpaque(true);
-                setClickCountToStart(1);
-            }
-            @Override
-            public Component getTableCellEditorComponent(JTable t, Object val, boolean sel, int row, int col) {
-                pnl.removeAll();
-                pnl.setBackground(C[4]);
-                Productos prod = (Productos) val;
-                JButton btnE = new JButton("Editar");
-                btnE.setFont(new Font("Arial", Font.BOLD, 11));
-                btnE.setBackground(new Color(37, 99, 235)); btnE.setForeground(Color.WHITE);
-                btnE.setOpaque(true); btnE.setBorderPainted(false);
-                btnE.setBorder(BorderFactory.createEmptyBorder(5, 12, 5, 12));
-                btnE.setCursor(new Cursor(Cursor.HAND_CURSOR));
-                btnE.addActionListener(new ActionListener() {
-                    @Override
-                    public void actionPerformed(ActionEvent e) { stopCellEditing(); mostrarFormEditar(prod); }
-                });
-                JButton btnD = new JButton("Eliminar");
-                btnD.setFont(new Font("Arial", Font.BOLD, 11));
-                btnD.setBackground(new Color(220, 38, 38)); btnD.setForeground(Color.WHITE);
-                btnD.setOpaque(true); btnD.setBorderPainted(false);
-                btnD.setBorder(BorderFactory.createEmptyBorder(5, 12, 5, 12));
-                btnD.setCursor(new Cursor(Cursor.HAND_CURSOR));
-                btnD.addActionListener(new ActionListener() {
-                    @Override
-                    public void actionPerformed(ActionEvent e) {
-                        stopCellEditing();
-                        int ok = JOptionPane.showConfirmDialog(panel,
-                                "¿Eliminar \"" + prod.getNombre() + "\" del inventario?",
-                                "Confirmar", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-                        if (ok == JOptionPane.YES_OPTION) {
-                            try { Productos p = new Productos(); p.setId(prod.getId()); p.eliminarBD(); construir(); }
-                            catch (Exception ex) { JOptionPane.showMessageDialog(panel, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE); }
-                        }
-                    }
-                });
-                pnl.add(btnE); pnl.add(btnD);
-                return pnl;
-            }
-            @Override public Object getCellEditorValue() { return null; }
-        }
-
-        tabla.getColumnModel().getColumn(6).setCellRenderer(new AccionRenderer());
-        tabla.getColumnModel().getColumn(6).setCellEditor(new AccionEditor());
-
         // Centrar columnas de texto
         javax.swing.table.DefaultTableCellRenderer centrado = new javax.swing.table.DefaultTableCellRenderer();
         centrado.setHorizontalAlignment(SwingConstants.CENTER);
         for (int i : new int[]{2, 3, 4}) tabla.getColumnModel().getColumn(i).setCellRenderer(centrado);
 
+        // ── Botones de accion (fuera de la tabla, actuan sobre la fila seleccionada) ──
+        final JButton btnEditar = new JButton("Editar");
+        btnEditar.setFont(new Font("Arial", Font.BOLD, 12));
+        btnEditar.setBackground(new Color(37, 99, 235)); btnEditar.setForeground(Color.WHITE);
+        btnEditar.setOpaque(true); btnEditar.setBorderPainted(false);
+        btnEditar.setBorder(BorderFactory.createEmptyBorder(8, 18, 8, 18));
+        btnEditar.setEnabled(false);
+
+        final JButton btnEliminar = new JButton("Eliminar");
+        btnEliminar.setFont(new Font("Arial", Font.BOLD, 12));
+        btnEliminar.setBackground(new Color(220, 38, 38)); btnEliminar.setForeground(Color.WHITE);
+        btnEliminar.setOpaque(true); btnEliminar.setBorderPainted(false);
+        btnEliminar.setBorder(BorderFactory.createEmptyBorder(8, 18, 8, 18));
+        btnEliminar.setEnabled(false);
+
+        // Habilitar botones cuando hay una fila seleccionada
+        tabla.getSelectionModel().addListSelectionListener(new javax.swing.event.ListSelectionListener() {
+            public void valueChanged(javax.swing.event.ListSelectionEvent e) {
+                boolean haySeleccion = tabla.getSelectedRow() >= 0;
+                btnEditar.setEnabled(haySeleccion);
+                btnEliminar.setEnabled(haySeleccion);
+            }
+        });
+
+        btnEditar.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                int row = tabla.getSelectedRow();
+                if (row >= 0 && row < lista.size()) mostrarFormEditar(lista.get(row));
+            }
+        });
+
+        btnEliminar.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                int row = tabla.getSelectedRow();
+                if (row < 0 || row >= lista.size()) return;
+                Productos prod = lista.get(row);
+                int ok = JOptionPane.showConfirmDialog(panel,
+                        "Eliminar \"" + prod.getNombre() + "\" del inventario?",
+                        "Confirmar", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                if (ok == JOptionPane.YES_OPTION) {
+                    try { Productos p = new Productos(); p.setId(prod.getId()); p.eliminarBD(); construir(); }
+                    catch (Exception ex) { JOptionPane.showMessageDialog(panel, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE); }
+                }
+            }
+        });
+
+        JPanel botonesPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 8));
+        botonesPanel.setBackground(C[2]);
+        botonesPanel.add(btnEditar);
+        botonesPanel.add(btnEliminar);
+
         JScrollPane gridScroll = new JScrollPane(tabla);
         gridScroll.setBorder(BorderFactory.createLineBorder(C[9], 1));
         gridScroll.getViewport().setBackground(C[2]);
         gridScroll.getVerticalScrollBar().setUnitIncrement(16);
-        body.add(gridScroll, BorderLayout.CENTER);
+
+        JPanel tablaPanel = new JPanel(new BorderLayout());
+        tablaPanel.setBackground(C[2]);
+        tablaPanel.add(gridScroll, BorderLayout.CENTER);
+        tablaPanel.add(botonesPanel, BorderLayout.SOUTH);
+        body.add(tablaPanel, BorderLayout.CENTER);
 
         c.add(body, BorderLayout.CENTER);
         return c;

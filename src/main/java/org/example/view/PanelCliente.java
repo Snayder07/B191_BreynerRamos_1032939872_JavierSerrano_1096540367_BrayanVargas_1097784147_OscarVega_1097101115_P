@@ -44,34 +44,16 @@ public class PanelCliente {
         panel.setBackground(C[0]);
         panel.add(crearSidebar(), BorderLayout.WEST);
 
-        if (cachedCitas != null) {
-            panel.add(crearContenido(), BorderLayout.CENTER);
-            panel.revalidate(); panel.repaint();
-            return;
+        try {
+            if (Main.clienteActual != null)
+                cachedCitas = Citas.consultarPorClienteBD(Main.clienteActual.getId());
+            else
+                cachedCitas = Collections.emptyList();
+        } catch (Exception e) {
+            cachedCitas = Collections.emptyList();
         }
-
-        JPanel cargando = new JPanel(new BorderLayout());
-        cargando.setBackground(C[0]);
-        JLabel lCargando = new JLabel("Cargando citas...", SwingConstants.CENTER);
-        lCargando.setFont(new Font("Arial", Font.PLAIN, 15));
-        lCargando.setForeground(C[7]);
-        cargando.add(lCargando, BorderLayout.CENTER);
-        panel.add(cargando, BorderLayout.CENTER);
+        panel.add(crearContenido(), BorderLayout.CENTER);
         panel.revalidate(); panel.repaint();
-
-        new SwingWorker<List<Citas>, Void>() {
-            @Override protected List<Citas> doInBackground() {
-                if (Main.clienteActual == null) return Collections.emptyList();
-                return Citas.consultarPorClienteBD(Main.clienteActual.getId());
-            }
-            @Override protected void done() {
-                try { cachedCitas = get(); }
-                catch (Exception e) { cachedCitas = Collections.emptyList(); }
-                panel.remove(cargando);
-                panel.add(crearContenido(), BorderLayout.CENTER);
-                panel.revalidate(); panel.repaint();
-            }
-        }.execute();
     }
 
     private JButton crearBoton(String texto, Color fondo, Color textColor, boolean borde) {

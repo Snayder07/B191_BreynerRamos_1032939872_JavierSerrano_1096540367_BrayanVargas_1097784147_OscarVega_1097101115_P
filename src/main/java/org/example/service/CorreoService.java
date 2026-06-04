@@ -12,6 +12,24 @@ import java.util.Properties;
  */
 public class CorreoService {
 
+    // ── Atributos propios ─────────────────────────────────────────────────
+    private String nombreEmisor;  // nombre que aparece en el campo "De:" del correo
+    private int    timeoutMs;     // tiempo maximo de espera para conectar al servidor SMTP
+
+    public CorreoService() {
+        this.nombreEmisor = "Kampets Veterinaria";
+        this.timeoutMs    = 15000;
+    }
+
+    public String getNombreEmisor()            { return nombreEmisor; }
+    public void   setNombreEmisor(String name) { this.nombreEmisor = name; }
+
+    public int  getTimeoutMs()           { return timeoutMs; }
+    public void setTimeoutMs(int timeout){ this.timeoutMs = timeout; }
+
+    // ── Metodos estaticos (usan los atributos de la instancia por defecto) ─
+    private static final CorreoService INSTANCIA = new CorreoService();
+
     /** Correo que aparece como FROM en el mensaje */
     private static String getRemitente() { return ConfigService.getEmailRemitente(); }
 
@@ -66,9 +84,9 @@ public class CorreoService {
         props.put("mail.smtp.port",               port);
         props.put("mail.smtp.ssl.trust",          host);
         props.put("mail.smtp.ssl.protocols",      "TLSv1.2");
-        props.put("mail.smtp.connectiontimeout",  "15000");
-        props.put("mail.smtp.timeout",            "15000");
-        props.put("mail.smtp.writetimeout",       "15000");
+        props.put("mail.smtp.connectiontimeout",  String.valueOf(INSTANCIA.timeoutMs));
+        props.put("mail.smtp.timeout",            String.valueOf(INSTANCIA.timeoutMs));
+        props.put("mail.smtp.writetimeout",       String.valueOf(INSTANCIA.timeoutMs));
 
         Session session = Session.getInstance(props, new Authenticator() {
             @Override
@@ -80,7 +98,7 @@ public class CorreoService {
 
         try {
             Message mensaje = new MimeMessage(session);
-            mensaje.setFrom(new InternetAddress(remitente, "Kampets Veterinaria", "UTF-8"));
+            mensaje.setFrom(new InternetAddress(remitente, INSTANCIA.nombreEmisor, "UTF-8"));
             mensaje.setRecipients(Message.RecipientType.TO, InternetAddress.parse(destinatario));
             mensaje.setSubject(asunto);
             mensaje.setContent(cuerpoHtml, "text/html; charset=UTF-8");

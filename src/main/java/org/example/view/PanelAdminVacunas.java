@@ -16,7 +16,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 public class PanelAdminVacunas {
     public JPanel panel;
@@ -42,28 +41,10 @@ public class PanelAdminVacunas {
         panel.setBackground(C[0]);
         panel.add(SidebarAdmin.crear(C, "adminVacunas", panel), BorderLayout.WEST);
 
-        if (lista != null) {
-            panel.add(crearContenido(), BorderLayout.CENTER);
-            panel.revalidate(); panel.repaint();
-            return;
-        }
-
-        JPanel cargando = crearPanelCargando();
-        panel.add(cargando, BorderLayout.CENTER);
+        try { lista = Control_vacunas.consultarTodosBD(); }
+        catch (Exception e) { lista = Collections.emptyList(); }
+        panel.add(crearContenido(), BorderLayout.CENTER);
         panel.revalidate(); panel.repaint();
-
-        new SwingWorker<List<Control_vacunas>, Void>() {
-            @Override protected List<Control_vacunas> doInBackground() {
-                try { return Control_vacunas.consultarTodosBD(); } catch (Exception e) { return java.util.Collections.emptyList(); }
-            }
-            @Override protected void done() {
-                try   { lista = get(); }
-                catch (InterruptedException | ExecutionException e) { lista = Collections.emptyList(); }
-                panel.remove(cargando);
-                panel.add(crearContenido(), BorderLayout.CENTER);
-                panel.revalidate(); panel.repaint();
-            }
-        }.execute();
     }
 
     private JPanel crearPanelCargando() {
@@ -501,32 +482,18 @@ public class PanelAdminVacunas {
                     final java.time.LocalDate fechaAplic = cv.getFechaAplicacion();
                     final java.time.LocalDate proxDosis  = cv.getProximaDosis();
 
-                    new SwingWorker<Void, Void>() {
-                        @Override
-                        protected Void doInBackground() throws Exception {
-                            String asunto = "Recordatorio de vacuna para " + nombreMascota + " — Kampets";
-                            String cuerpo = construirCorreoVacuna(nombreDueno, nombreMascota,
-                                    nombreVacuna, fechaAplic, proxDosis);
-                            CorreoService.enviarCorreoGeneral(correo, nombreDueno, asunto, cuerpo);
-                            return null;
-                        }
-                        @Override
-                        protected void done() {
-                            try {
-                                get();
-                                JOptionPane.showMessageDialog(panel,
-                                        "<html><b>✅ Guardado correctamente</b><br>" +
-                                        "Correo enviado a <i>" + correo + "</i><br>" +
-                                        "con el recordatorio de la próxima dosis.</html>",
-                                        "Correo enviado", JOptionPane.INFORMATION_MESSAGE);
-                            } catch (Exception ex) {
-                                JOptionPane.showMessageDialog(panel,
-                                        "<html><b>Vacuna guardada</b>, pero no se pudo enviar el correo:<br>" +
-                                        ex.getMessage() + "</html>",
-                                        "Aviso", JOptionPane.WARNING_MESSAGE);
-                            }
-                        }
-                    }.execute();
+                    try {
+                        String asunto = "Recordatorio de vacuna para " + nombreMascota + " - Kampets";
+                        String cuerpo = construirCorreoVacuna(nombreDueno, nombreMascota, nombreVacuna, fechaAplic, proxDosis);
+                        CorreoService.enviarCorreoGeneral(correo, nombreDueno, asunto, cuerpo);
+                        JOptionPane.showMessageDialog(panel,
+                                "Vacuna guardada correctamente. Correo enviado a " + correo,
+                                "Correo enviado", JOptionPane.INFORMATION_MESSAGE);
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(panel,
+                                "Vacuna guardada, pero no se pudo enviar el correo:\n" + ex.getMessage(),
+                                "Aviso", JOptionPane.WARNING_MESSAGE);
+                    }
                 }
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(dialog, "Error al guardar: " + ex.getMessage());
@@ -551,56 +518,31 @@ public class PanelAdminVacunas {
                 BorderFactory.createEmptyBorder(7, 14, 7, 14)));
     }
 
+    // Construye el cuerpo HTML del correo de recordatorio de vacuna
     private String construirCorreoVacuna(String nombreDueno, String nombreMascota,
                                          String nombreVacuna,
                                          java.time.LocalDate fechaAplic,
                                          java.time.LocalDate proxDosis) {
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy",
-                new java.util.Locale("es", "CO"));
-        String fechaAplicStr = fechaAplic != null ? fechaAplic.format(fmt) : "—";
-        String proxDosisStr  = proxDosis  != null ? proxDosis.format(fmt)  : "—";
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        String fechaAplicStr = fechaAplic != null ? fechaAplic.format(fmt) : "-";
+        String proxDosisStr  = proxDosis  != null ? proxDosis.format(fmt)  : "-";
 
-        return "<!DOCTYPE html><html><body style='font-family:Arial,sans-serif;" +
-                "background:#f0f8f4;margin:0;padding:20px'>" +
-                "<div style='max-width:520px;margin:auto;background:#fff;" +
-                "border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.1)'>" +
-
-                // Header verde
-                "<div style='background:#166534;padding:28px 32px'>" +
-                "<h2 style='color:#fff;margin:0;font-size:22px'>🐾 Kampets Veterinaria</h2>" +
-                "<p style='color:#bbf7d0;margin:6px 0 0'>Recordatorio de vacunación</p>" +
-                "</div>" +
-
-                // Cuerpo
-                "<div style='padding:28px 32px'>" +
-                "<p style='color:#374151;font-size:15px'>Hola <strong>" + nombreDueno + "</strong>,</p>" +
-                "<p style='color:#374151'>Queremos recordarte que se ha actualizado el plan de vacunación " +
-                "de tu mascota <strong>" + nombreMascota + "</strong>.</p>" +
-
-                // Tabla de info
-                "<div style='background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;" +
-                "padding:20px;margin:20px 0'>" +
-                "<table style='width:100%;border-collapse:collapse'>" +
-                "<tr><td style='color:#6b7280;padding:6px 0;font-size:13px'>Mascota</td>" +
-                "<td style='color:#111827;font-weight:bold;font-size:13px'>" + nombreMascota + "</td></tr>" +
-                "<tr><td style='color:#6b7280;padding:6px 0;font-size:13px'>Vacuna</td>" +
-                "<td style='color:#111827;font-weight:bold;font-size:13px'>" + nombreVacuna + "</td></tr>" +
-                "<tr><td style='color:#6b7280;padding:6px 0;font-size:13px'>Fecha aplicación</td>" +
-                "<td style='color:#111827;font-weight:bold;font-size:13px'>" + fechaAplicStr + "</td></tr>" +
-                "<tr><td style='color:#6b7280;padding:6px 0;font-size:13px'>Próxima dosis</td>" +
-                "<td style='color:#166534;font-weight:bold;font-size:14px'>" + proxDosisStr + "</td></tr>" +
-                "</table></div>" +
-
-                "<p style='color:#374151;font-size:13px'>Te recomendamos agendar una cita antes de esa fecha " +
-                "para mantener a <strong>" + nombreMascota + "</strong> protegido/a. " +
-                "Ingresa a la aplicación <strong>Kampets Veterinaria</strong> para agendar tu cita.</p>" +
-                "</div>" +
-
-                // Footer
-                "<div style='background:#f9fafb;padding:16px 32px;border-top:1px solid #e5e7eb'>" +
-                "<p style='color:#9ca3af;font-size:11px;text-align:center;margin:0'>" +
-                "Kampets Veterinaria &nbsp;·&nbsp; Este correo se generó automáticamente</p>" +
-                "</div>" +
-                "</div></body></html>";
+        return "<div style='font-family:Arial,sans-serif;max-width:520px;margin:auto;"
+             + "background:#f0fdf4;border-radius:10px;padding:32px;'>"
+             + "<h2 style='color:#166534;'>Recordatorio de Vacunacion - Kampets</h2>"
+             + "<p>Hola <b>" + nombreDueno + "</b>. "
+             + "Te recordamos el plan de vacunacion de tu mascota <b>" + nombreMascota + "</b>.</p>"
+             + "<table style='width:100%;border-collapse:collapse;margin:20px 0;'>"
+             + "<tr><td style='padding:10px;background:#dcfce7;font-weight:bold;'>Mascota</td>"
+             +     "<td style='padding:10px;'>" + nombreMascota + "</td></tr>"
+             + "<tr><td style='padding:10px;background:#dcfce7;font-weight:bold;'>Vacuna</td>"
+             +     "<td style='padding:10px;'>" + nombreVacuna + "</td></tr>"
+             + "<tr><td style='padding:10px;background:#dcfce7;font-weight:bold;'>Fecha aplicacion</td>"
+             +     "<td style='padding:10px;'>" + fechaAplicStr + "</td></tr>"
+             + "<tr><td style='padding:10px;background:#dcfce7;font-weight:bold;'>Proxima dosis</td>"
+             +     "<td style='padding:10px;color:#166534;font-weight:bold;'>" + proxDosisStr + "</td></tr>"
+             + "</table>"
+             + "<p>Agenda tu cita en Kampets Veterinaria antes de esa fecha.</p>"
+             + "</div>";
     }
 }

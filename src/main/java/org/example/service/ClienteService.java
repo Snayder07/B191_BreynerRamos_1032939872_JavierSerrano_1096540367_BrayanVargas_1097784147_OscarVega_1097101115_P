@@ -5,6 +5,22 @@ import java.util.List;
 
 public class ClienteService {
 
+    // ── Atributos propios ─────────────────────────────────────────────────
+    private int minimoCaracteresContrasena;   // minimo de caracteres requeridos en la contrasena
+    private boolean correoEnMinusculas;       // si el correo se guarda en minusculas
+
+    public ClienteService() {
+        this.minimoCaracteresContrasena = 8;
+        this.correoEnMinusculas         = true;
+    }
+
+    public int getMinimoCaracteresContrasena()              { return minimoCaracteresContrasena; }
+    public void setMinimoCaracteresContrasena(int minimo)   { this.minimoCaracteresContrasena = minimo; }
+
+    public boolean isCorreoEnMinusculas()                   { return correoEnMinusculas; }
+    public void setCorreoEnMinusculas(boolean valor)        { this.correoEnMinusculas = valor; }
+
+    // ── Metodos ───────────────────────────────────────────────────────────
     public void registrar(String nombre, String apellido, String correo,
                           String telefono, String contrasena,
                           String confirmar) throws Exception {
@@ -15,8 +31,8 @@ public class ClienteService {
             throw new Exception("El correo es obligatorio.");
         if (contrasena == null || contrasena.trim().isEmpty())
             throw new Exception("La contrasena es obligatoria.");
-        if (contrasena.length() < 8)
-            throw new Exception("La contrasena debe tener al menos 8 caracteres.");
+        if (contrasena.length() < minimoCaracteresContrasena)
+            throw new Exception("La contrasena debe tener al menos " + minimoCaracteresContrasena + " caracteres.");
         if (!contrasena.equals(confirmar))
             throw new Exception("Las contrasenas no coinciden.");
         if (buscarPorCorreo(correo) != null)
@@ -24,7 +40,8 @@ public class ClienteService {
 
         Cliente cliente = new Cliente();
         cliente.setNombre((nombre.trim() + " " + apellido.trim()).trim());
-        cliente.setCorreo(correo.trim().toLowerCase());
+        String correoFinal = correoEnMinusculas ? correo.trim().toLowerCase() : correo.trim();
+        cliente.setCorreo(correoFinal);
         cliente.setTelefono(telefono != null ? telefono.trim() : "");
         cliente.setDireccion("");
         cliente.setContrasena(contrasena);

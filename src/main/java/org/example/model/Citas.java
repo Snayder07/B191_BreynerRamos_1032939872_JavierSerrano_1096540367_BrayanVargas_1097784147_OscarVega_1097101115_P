@@ -158,8 +158,10 @@ public class Citas implements Persistible {
     public static List<Citas> consultarDeHoyBD() {
         List<Citas> lista = new ArrayList<>();
         ConexionBD bd = new ConexionBD();
+        // Usamos la fecha de Java para evitar diferencias de zona horaria con CURRENT_DATE
+        String hoy = java.time.LocalDate.now().toString(); // formato yyyy-MM-dd
         try {
-            ResultSet rs = bd.consultarBD(SQL_BASE + " WHERE c.fecha_cita = CURRENT_DATE ORDER BY c.hora_cita ASC");
+            ResultSet rs = bd.consultarBD(SQL_BASE + " WHERE c.fecha_cita = '" + hoy + "' ORDER BY c.hora_cita ASC");
             while (rs.next()) lista.add(mapear(rs));
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, "Error al consultar citas de hoy: " + e.getMessage());

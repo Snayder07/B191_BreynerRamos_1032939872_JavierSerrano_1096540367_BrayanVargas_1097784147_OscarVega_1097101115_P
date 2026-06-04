@@ -1,6 +1,11 @@
 package org.example.view;
 
 import com.toedter.calendar.JDateChooser;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.example.service.CitaService;
 import org.example.model.Citas;
 import org.example.model.Control_vacunas;
@@ -47,37 +52,10 @@ public class PanelAdmin {
         panel.setBackground(C[0]);
         panel.add(SidebarAdmin.crear(C, "panelAdmin", panel), BorderLayout.WEST);
 
-        if (cachedCitasHoy != null && cachedCitasVacunas != null) {
-            panel.add(crearContenido(), BorderLayout.CENTER);
-            panel.revalidate(); panel.repaint();
-            return;
-        }
-
-        JPanel cargando = new JPanel(new BorderLayout());
-        cargando.setBackground(C[0]);
-        JLabel lCargando = new JLabel("Cargando...", SwingConstants.CENTER);
-        lCargando.setFont(new Font("Arial", Font.PLAIN, 16));
-        lCargando.setForeground(C[7]);
-        cargando.add(lCargando, BorderLayout.CENTER);
-        panel.add(cargando, BorderLayout.CENTER);
+        try { cachedCitasHoy     = Citas.consultarDeHoyBD();   } catch (Exception e) { cachedCitasHoy     = Collections.emptyList(); JOptionPane.showMessageDialog(panel, "Error cargando citas de hoy: " + e.getMessage()); }
+        try { cachedCitasVacunas = Citas.consultarVacunasBD(); } catch (Exception e) { cachedCitasVacunas = Collections.emptyList(); }
+        panel.add(crearContenido(), BorderLayout.CENTER);
         panel.revalidate(); panel.repaint();
-
-        new SwingWorker<Void, Void>() {
-            private List<Citas> hoy;
-            private List<Citas> vacunas;
-            @Override protected Void doInBackground() {
-                hoy     = Citas.consultarDeHoyBD();
-                vacunas = Citas.consultarVacunasBD();
-                return null;
-            }
-            @Override protected void done() {
-                cachedCitasHoy     = hoy     != null ? hoy     : Collections.emptyList();
-                cachedCitasVacunas = vacunas != null ? vacunas : Collections.emptyList();
-                panel.remove(cargando);
-                panel.add(crearContenido(), BorderLayout.CENTER);
-                panel.revalidate(); panel.repaint();
-            }
-        }.execute();
     }
 
     private JLabel lbl(String t, int sz, int st, Color c) {
@@ -127,20 +105,27 @@ public class PanelAdmin {
         JPanel der = new JPanel(new FlowLayout(FlowLayout.RIGHT,10,0));
         der.setBackground(C[2]);
 
-        JButton btnExportar = btn(" Exportar reporte", C[2], C[1]);
+        JButton btnActualizar = btn("Actualizar", C[2], C[1]);
+        btnActualizar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(C[9],1), BorderFactory.createEmptyBorder(8,16,8,16)));
+        btnActualizar.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) { recargar(); }
+        });
+
+        JButton btnExportar = btn("Exportar PDF", C[2], C[1]);
         btnExportar.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(C[9],1), BorderFactory.createEmptyBorder(8,16,8,16)));
         btnExportar.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) { exportarReporte(); }
         });
 
-        JButton btnNuevo = btn(" Nuevo admin", new Color(22,163,74), Color.WHITE);
+        JButton btnNuevo = btn("Nuevo admin", new Color(22,163,74), Color.WHITE);
         btnNuevo.setBorder(BorderFactory.createEmptyBorder(9,18,9,18));
         btnNuevo.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) { mostrarFormularioNuevoAdmin(); }
         });
 
-        der.add(btnExportar); der.add(btnNuevo);
+        der.add(btnActualizar); der.add(btnExportar); der.add(btnNuevo);
         tb.add(izq, BorderLayout.WEST); tb.add(der, BorderLayout.EAST);
         return tb;
     }
@@ -643,56 +628,160 @@ public class PanelAdmin {
     }
 
     private void exportarReporte() {
+        // Selector de archivo — solo PDF
         JFileChooser chooser = new JFileChooser();
-        chooser.setDialogTitle("Guardar reporte");
-        chooser.setSelectedFile(new File("reporte_kampets.txt"));
+        chooser.setDialogTitle("Guardar reporte del dia");
+        chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("PDF (*.pdf)", "pdf"));
+        chooser.setSelectedFile(new File("reporte_kampets_" + LocalDate.now() + ".pdf"));
         if (chooser.showSaveDialog(panel) != JFileChooser.APPROVE_OPTION) return;
 
+        // Asegurar extension .pdf
+        File archivo = chooser.getSelectedFile();
+        if (!archivo.getName().toLowerCase().endsWith(".pdf"))
+            archivo = new File(archivo.getAbsolutePath() + ".pdf");
+
+        // Cargar datos
         List<Citas> citasHoy;
         List<Citas> citasVacunas;
-        try { citasHoy      = Citas.consultarDeHoyBD();          } catch (Exception e) { citasHoy      = Collections.emptyList(); }
-        try { citasVacunas  = Citas.consultarVacunasBD();   } catch (Exception e) { citasVacunas  = Collections.emptyList(); }
+        try { citasHoy     = Citas.consultarDeHoyBD();  } catch (Exception e) { citasHoy     = Collections.emptyList(); }
+        try { citasVacunas = Citas.consultarVacunasBD();} catch (Exception e) { citasVacunas = Collections.emptyList(); }
+
         long pendientes = 0;
         for (Citas c : citasVacunas) {
             if (c.getEstadoCita() == EstadoCita.PENDIENTE || c.getEstadoCita() == EstadoCita.CONFIRMADA)
                 pendientes++;
         }
 
-        try (PrintWriter pw = new PrintWriter(new FileWriter(chooser.getSelectedFile()))) {
-            pw.println("       REPORTE KAMPETS VETERINARIA      ");
-            pw.println("Fecha: " + LocalDate.now());
-            pw.println(); pw.println("ESTADÍSTICAS DEL DÍA");
-            pw.println("  Citas hoy:                    " + citasHoy.size());
-            pw.println("  Vacunaciones pendientes:      " + pendientes);
-            pw.println();
-            if (!citasHoy.isEmpty()) {
-                pw.println("CITAS DE HOY:");
-                DateTimeFormatter fmt = DateTimeFormatter.ofPattern("HH:mm");
-                for (Citas c : citasHoy) {
-                    String mascota = c.getMascota()  != null ? c.getMascota().getNombre()  : "—";
-                    String vet     = c.getEmpleado() != null ? c.getEmpleado().getNombre() : "—";
-                    String hora    = c.getHoraCita() != null ? c.getHoraCita().format(fmt) : "—";
-                    String estado  = c.getEstadoCita() != null ? c.getEstadoCita().toString() : "—";
-                    pw.println("  " + hora + " | " + mascota + " | " + vet + " | " + estado);
-                }
-                pw.println();
-            }
-            if (!citasVacunas.isEmpty()) {
-                pw.println("CITAS DE VACUNACIÓN PENDIENTES:");
-                DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-                for (Citas c : citasVacunas) {
-                    String mascota = c.getMascota() != null ? c.getMascota().getNombre() : "—";
-                    String fecha   = c.getFechaCita() != null ? c.getFechaCita().format(fmt) : "—";
-                    String estado  = c.getEstadoCita() != null ? c.getEstadoCita().toString() : "—";
-                    pw.println("  " + fecha + " | " + mascota + " | " + estado);
-                }
-                pw.println();
-            }
-            pw.println("  Generado por Kampets · Sistema interno");
+        // Generar PDF con PDFBox
+        try (PDDocument doc = new PDDocument()) {
+            PDPage page = new PDPage(PDRectangle.A4);
+            doc.addPage(page);
 
-            JOptionPane.showMessageDialog(panel,"Reporte exportado:\n"+chooser.getSelectedFile().getAbsolutePath(),"Listo",JOptionPane.INFORMATION_MESSAGE);
-        } catch (IOException ex) {
-            JOptionPane.showMessageDialog(panel,"Error: "+ex.getMessage(),"Error",JOptionPane.ERROR_MESSAGE);
+            float margin = 50;
+            float y = page.getMediaBox().getHeight() - margin;
+            DateTimeFormatter fmtFecha = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            DateTimeFormatter fmtHora  = DateTimeFormatter.ofPattern("HH:mm");
+
+            try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
+
+                // Titulo
+                pdfTexto(cs, PDType1Font.HELVETICA_BOLD, 18, margin, y, "REPORTE DEL DIA - KAMPETS VETERINARIA");
+                y -= 22;
+                pdfTexto(cs, PDType1Font.HELVETICA, 10, margin, y, "Fecha: " + LocalDate.now().format(fmtFecha));
+                y -= 28;
+                pdfLinea(cs, margin, y, page.getMediaBox().getWidth() - margin);
+                y -= 18;
+
+                // Estadisticas
+                pdfTexto(cs, PDType1Font.HELVETICA_BOLD, 13, margin, y, "ESTADISTICAS");
+                y -= 18;
+                pdfTexto(cs, PDType1Font.HELVETICA, 11, margin, y, "  Citas programadas hoy:       " + citasHoy.size());
+                y -= 15;
+                pdfTexto(cs, PDType1Font.HELVETICA, 11, margin, y, "  Vacunaciones pendientes:     " + pendientes);
+                y -= 24;
+                pdfLinea(cs, margin, y, page.getMediaBox().getWidth() - margin);
+                y -= 18;
+
+                // Citas de hoy
+                pdfTexto(cs, PDType1Font.HELVETICA_BOLD, 13, margin, y, "CITAS DE HOY");
+                y -= 18;
+                if (citasHoy.isEmpty()) {
+                    pdfTexto(cs, PDType1Font.HELVETICA, 10, margin, y, "  No hay citas programadas para hoy.");
+                    y -= 15;
+                } else {
+                    // Encabezados
+                    pdfTexto(cs, PDType1Font.HELVETICA_BOLD, 10, margin,       y, "Hora");
+                    pdfTexto(cs, PDType1Font.HELVETICA_BOLD, 10, margin + 60,  y, "Mascota");
+                    pdfTexto(cs, PDType1Font.HELVETICA_BOLD, 10, margin + 200, y, "Veterinario");
+                    pdfTexto(cs, PDType1Font.HELVETICA_BOLD, 10, margin + 340, y, "Estado");
+                    y -= 14;
+                    for (Citas c : citasHoy) {
+                        String hora    = c.getHoraCita()   != null ? c.getHoraCita().format(fmtHora)    : "-";
+                        String mascota = c.getMascota()    != null ? c.getMascota().getNombre()           : "-";
+                        String vet     = c.getEmpleado()   != null ? c.getEmpleado().getNombre()          : "-";
+                        String estado  = c.getEstadoCita() != null ? c.getEstadoCita().name()             : "-";
+                        pdfTexto(cs, PDType1Font.HELVETICA, 10, margin,       y, hora);
+                        pdfTexto(cs, PDType1Font.HELVETICA, 10, margin + 60,  y, truncar(mascota, 18));
+                        pdfTexto(cs, PDType1Font.HELVETICA, 10, margin + 200, y, truncar(vet,     18));
+                        pdfTexto(cs, PDType1Font.HELVETICA, 10, margin + 340, y, estado);
+                        y -= 14;
+                    }
+                }
+                y -= 10;
+                pdfLinea(cs, margin, y, page.getMediaBox().getWidth() - margin);
+                y -= 18;
+
+                // Vacunaciones pendientes
+                pdfTexto(cs, PDType1Font.HELVETICA_BOLD, 13, margin, y, "VACUNACIONES PENDIENTES");
+                y -= 18;
+                if (citasVacunas.isEmpty()) {
+                    pdfTexto(cs, PDType1Font.HELVETICA, 10, margin, y, "  No hay vacunaciones pendientes.");
+                } else {
+                    pdfTexto(cs, PDType1Font.HELVETICA_BOLD, 10, margin,       y, "Fecha");
+                    pdfTexto(cs, PDType1Font.HELVETICA_BOLD, 10, margin + 100, y, "Mascota");
+                    pdfTexto(cs, PDType1Font.HELVETICA_BOLD, 10, margin + 280, y, "Estado");
+                    y -= 14;
+                    for (Citas c : citasVacunas) {
+                        if (c.getEstadoCita() != EstadoCita.PENDIENTE && c.getEstadoCita() != EstadoCita.CONFIRMADA) continue;
+                        String fecha   = c.getFechaCita()  != null ? c.getFechaCita().format(fmtFecha) : "-";
+                        String mascota = c.getMascota()    != null ? c.getMascota().getNombre()          : "-";
+                        String estado  = c.getEstadoCita() != null ? c.getEstadoCita().name()            : "-";
+                        pdfTexto(cs, PDType1Font.HELVETICA, 10, margin,       y, fecha);
+                        pdfTexto(cs, PDType1Font.HELVETICA, 10, margin + 100, y, truncar(mascota, 22));
+                        pdfTexto(cs, PDType1Font.HELVETICA, 10, margin + 280, y, estado);
+                        y -= 14;
+                    }
+                }
+
+                // Pie de pagina
+                pdfLinea(cs, margin, 45, page.getMediaBox().getWidth() - margin);
+                pdfTexto(cs, PDType1Font.HELVETICA, 8, margin, 32, "Generado por Kampets Veterinaria - Sistema de gestion");
+            }
+
+            doc.save(archivo);
+            JOptionPane.showMessageDialog(panel,
+                    "Reporte PDF exportado:\n" + archivo.getAbsolutePath(),
+                    "Listo", JOptionPane.INFORMATION_MESSAGE);
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(panel,
+                    "Error al generar PDF: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    // ── Helpers para generar PDF ──────────────────────────────────────────
+    private void pdfTexto(PDPageContentStream cs, PDType1Font fuente, float tam,
+                          float x, float y, String texto) throws IOException {
+        cs.beginText();
+        cs.setFont(fuente, tam);
+        cs.newLineAtOffset(x, y);
+        cs.showText(limpiarTexto(texto));
+        cs.endText();
+    }
+
+    private void pdfLinea(PDPageContentStream cs, float x1, float y, float x2) throws IOException {
+        cs.setStrokingColor(0.7f, 0.7f, 0.7f);
+        cs.moveTo(x1, y); cs.lineTo(x2, y); cs.stroke();
+        cs.setStrokingColor(0f, 0f, 0f);
+    }
+
+    private String truncar(String s, int max) {
+        if (s == null) return "-";
+        return s.length() <= max ? s : s.substring(0, max - 1) + ".";
+    }
+
+    private String limpiarTexto(String s) {
+        if (s == null) return "";
+        StringBuilder sb = new StringBuilder();
+        for (char ch : s.toCharArray()) {
+            int code = (int) ch;
+            if      (code == 0x2014 || code == 0x2013) sb.append('-');
+            else if (code == 0x201C || code == 0x201D) sb.append('"');
+            else if (code == 0x2018 || code == 0x2019) sb.append('\'');
+            else if (code > 255)                        sb.append('?');
+            else                                        sb.append(ch);
+        }
+        return sb.toString();
     }
 }

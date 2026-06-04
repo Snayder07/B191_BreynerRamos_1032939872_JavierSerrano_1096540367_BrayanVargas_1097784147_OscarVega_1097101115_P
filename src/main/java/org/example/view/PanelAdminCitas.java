@@ -40,33 +40,10 @@ public class PanelAdminCitas {
         panel.setBackground(C[0]);
         panel.add(SidebarAdmin.crear(C, "adminCitas", panel), BorderLayout.WEST);
 
-        if (cachedTodas != null) {
-            panel.add(crearContenido(), BorderLayout.CENTER);
-            panel.revalidate(); panel.repaint();
-            return;
-        }
-
-        JPanel cargando = new JPanel(new BorderLayout());
-        cargando.setBackground(C[0]);
-        JLabel lCargando = new JLabel("Cargando citas...", SwingConstants.CENTER);
-        lCargando.setFont(new Font("Arial", Font.PLAIN, 15));
-        lCargando.setForeground(C[7]);
-        cargando.add(lCargando, BorderLayout.CENTER);
-        panel.add(cargando, BorderLayout.CENTER);
+        try { cachedTodas = Citas.consultarTodosBD(); }
+        catch (Exception e) { cachedTodas = Collections.emptyList(); }
+        panel.add(crearContenido(), BorderLayout.CENTER);
         panel.revalidate(); panel.repaint();
-
-        new SwingWorker<List<Citas>, Void>() {
-            @Override protected List<Citas> doInBackground() {
-                return Citas.consultarTodosBD();
-            }
-            @Override protected void done() {
-                try { cachedTodas = get(); }
-                catch (Exception e) { cachedTodas = Collections.emptyList(); }
-                panel.remove(cargando);
-                panel.add(crearContenido(), BorderLayout.CENTER);
-                panel.revalidate(); panel.repaint();
-            }
-        }.execute();
     }
 
     private JLabel lbl(String t, int sz, int st, Color c) {
@@ -221,9 +198,9 @@ public class PanelAdminCitas {
             }
         }
 
-        // Columnas — la ultima es "Accion" (no viene de BD)
-        String[] cols = {"Mascota", "Dueno", "Servicio", "Direccion", "Fecha", "Hora", "Estado", "Accion"};
-        Object[][] datos = new Object[citasFiltradas.size()][8];
+        // Columnas de la tabla
+        String[] cols = {"Mascota", "Dueno", "Servicio", "Direccion", "Fecha", "Hora", "Estado"};
+        Object[][] datos = new Object[citasFiltradas.size()][7];
         for (int i = 0; i < citasFiltradas.size(); i++) {
             Citas cita = citasFiltradas.get(i);
             datos[i][0] = cita.getMascota() != null ? cita.getMascota().getNombre() : "-";
@@ -249,17 +226,15 @@ public class PanelAdminCitas {
             }
             datos[i][2] = motivoText;
             datos[i][3] = direccion;
-            datos[i][4] = cita.getFechaCita() != null ? cita.getFechaCita().toString()  : "-";
-            datos[i][5] = cita.getHoraCita()  != null ? cita.getHoraCita().toString()   : "-";
-            datos[i][6] = cita.getEstadoCita()!= null ? cita.getEstadoCita().name()     : "-";
-            datos[i][7] = cita.getId();
+            datos[i][4] = cita.getFechaCita() != null ? cita.getFechaCita().toString() : "-";
+            datos[i][5] = cita.getHoraCita()  != null ? cita.getHoraCita().toString()  : "-";
+            datos[i][6] = cita.getEstadoCita()!= null ? cita.getEstadoCita().name()    : "-";
         }
 
         final List<Citas> citasRef = citasFiltradas;
 
         DefaultTableModel modelo = new DefaultTableModel(datos, cols) {
-            public boolean isCellEditable(int r, int cc) { return cc == 7; }
-            public Class<?> getColumnClass(int c) { return c == 7 ? Object.class : String.class; }
+            public boolean isCellEditable(int r, int c) { return false; }
         };
 
         JTable tabla = new JTable(modelo);
@@ -268,13 +243,14 @@ public class PanelAdminCitas {
         tabla.setRowHeight(44);
         tabla.setShowGrid(false); tabla.setIntercellSpacing(new Dimension(0, 0));
         tabla.setSelectionBackground(C[3]); tabla.setFillsViewportHeight(true);
+        tabla.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         JTableHeader th = tabla.getTableHeader();
         th.setBackground(C[14]); th.setForeground(C[1]);
         th.setFont(new Font("Arial", Font.BOLD, 11));
         th.setReorderingAllowed(false); th.setPreferredSize(new Dimension(0, 36));
 
-        // ── Renderer columna Estado ───────────────────────────
+        // Renderer columna Estado (colores segun estado)
         tabla.getColumnModel().getColumn(6).setCellRenderer(new DefaultTableCellRenderer() {
             public Component getTableCellRendererComponent(JTable t, Object v, boolean s, boolean f, int r, int col) {
                 JLabel l = (JLabel) super.getTableCellRendererComponent(t, v, s, f, r, col);
@@ -295,7 +271,7 @@ public class PanelAdminCitas {
             }
         });
 
-        // ── Renderer base para demas columnas ─────────────────
+        // Renderer base para las demas columnas
         DefaultTableCellRenderer base = new DefaultTableCellRenderer() {
             public Component getTableCellRendererComponent(JTable t, Object v, boolean s, boolean f, int r, int col) {
                 super.getTableCellRendererComponent(t, v, s, f, r, col);
@@ -310,14 +286,98 @@ public class PanelAdminCitas {
         };
         for (int i = 0; i < 6; i++) tabla.getColumnModel().getColumn(i).setCellRenderer(base);
 
-        // ── Renderer + Editor de la columna Accion ────────────
-        tabla.getColumnModel().getColumn(7).setCellRenderer(new AccionRenderer());
-        tabla.getColumnModel().getColumn(7).setCellEditor(new AccionEditor(tabla, citasRef, bodyRef));
-
-        // Anchos de columna
-        int[] anchos = {110, 130, 160, 170, 90, 65, 110, 200};
+        int[] anchos = {110, 130, 160, 170, 90, 65, 120};
         for (int i = 0; i < anchos.length; i++)
             tabla.getColumnModel().getColumn(i).setPreferredWidth(anchos[i]);
+
+        // ── Botones de accion (fuera de la tabla, actuan sobre la fila seleccionada) ──
+        final JButton btnConfirmar = new JButton("Confirmar");
+        btnConfirmar.setFont(new Font("Arial", Font.BOLD, 12));
+        btnConfirmar.setBackground(new Color(22, 163, 74)); btnConfirmar.setForeground(Color.WHITE);
+        btnConfirmar.setOpaque(true); btnConfirmar.setBorderPainted(false);
+        btnConfirmar.setBorder(BorderFactory.createEmptyBorder(8, 18, 8, 18));
+        btnConfirmar.setEnabled(false);
+
+        final JButton btnCancelar = new JButton("Cancelar");
+        btnCancelar.setFont(new Font("Arial", Font.BOLD, 12));
+        btnCancelar.setBackground(new Color(220, 38, 38)); btnCancelar.setForeground(Color.WHITE);
+        btnCancelar.setOpaque(true); btnCancelar.setBorderPainted(false);
+        btnCancelar.setBorder(BorderFactory.createEmptyBorder(8, 18, 8, 18));
+        btnCancelar.setEnabled(false);
+
+        // Habilitar o deshabilitar botones segun el estado de la fila seleccionada
+        tabla.getSelectionModel().addListSelectionListener(new javax.swing.event.ListSelectionListener() {
+            public void valueChanged(javax.swing.event.ListSelectionEvent e) {
+                if (e.getValueIsAdjusting()) return;
+                int row = tabla.getSelectedRow();
+                if (row < 0 || row >= citasRef.size()) {
+                    btnConfirmar.setEnabled(false);
+                    btnCancelar.setEnabled(false);
+                    return;
+                }
+                String estado = citasRef.get(row).getEstadoCita() != null
+                        ? citasRef.get(row).getEstadoCita().name() : "";
+                btnConfirmar.setEnabled(estado.equals("PENDIENTE") || estado.equals("EN_ESPERA"));
+                btnCancelar.setEnabled(!estado.equals("CANCELADA") && !estado.equals("COMPLETADA"));
+            }
+        });
+
+        btnConfirmar.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                int row = tabla.getSelectedRow();
+                if (row < 0 || row >= citasRef.size()) return;
+                Citas cita = citasRef.get(row);
+                String nombreMascota = cita.getMascota() != null ? cita.getMascota().getNombre() : "esta mascota";
+                int resp = JOptionPane.showConfirmDialog(panel,
+                        "Confirmar la cita de " + nombreMascota + "?",
+                        "Confirmar cita", JOptionPane.YES_NO_OPTION);
+                if (resp == JOptionPane.YES_OPTION) {
+                    try {
+                        new CitaService().confirmarCita(cita.getId());
+                        JOptionPane.showMessageDialog(panel, "Cita confirmada correctamente.");
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(panel, "Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                    cachedTodas = null; construir(); Main.recargarPanelAdmin();
+                    // Si era una cita de vacunacion, preguntar si registrar la vacuna
+                    boolean esVacunacion = cita.getMotivo() != null && cita.getMotivo().toLowerCase().contains("vacun");
+                    if (!esVacunacion && cita.getServicios() != null) {
+                        for (Cita_servicio cs : cita.getServicios()) {
+                            if (cs.getServicio() != null && cs.getServicio().getNombre().toLowerCase().contains("vacun")) {
+                                esVacunacion = true; break;
+                            }
+                        }
+                    }
+                    if (esVacunacion && cita.getMascota() != null) abrirDialogoRegistrarVacuna(cita);
+                }
+            }
+        });
+
+        btnCancelar.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                int row = tabla.getSelectedRow();
+                if (row < 0 || row >= citasRef.size()) return;
+                Citas cita = citasRef.get(row);
+                String nombreMascota = cita.getMascota() != null ? cita.getMascota().getNombre() : "esta mascota";
+                int resp = JOptionPane.showConfirmDialog(panel,
+                        "Cancelar la cita de " + nombreMascota + "?",
+                        "Cancelar cita", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                if (resp == JOptionPane.YES_OPTION) {
+                    try {
+                        new CitaService().cancelarCita(cita.getId());
+                        JOptionPane.showMessageDialog(panel, "Cita cancelada correctamente.");
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(panel, "Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                    cachedTodas = null; construir(); Main.recargarPanelAdmin();
+                }
+            }
+        });
+
+        JPanel botonesPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 8));
+        botonesPanel.setBackground(C[2]);
+        botonesPanel.add(btnConfirmar);
+        botonesPanel.add(btnCancelar);
 
         JScrollPane sp = new JScrollPane(tabla);
         sp.setBorder(null); sp.getVerticalScrollBar().setUnitIncrement(16);
@@ -336,6 +396,7 @@ public class PanelAdminCitas {
             wrapper.add(sinCitas, BorderLayout.CENTER);
         } else {
             wrapper.add(sp, BorderLayout.CENTER);
+            wrapper.add(botonesPanel, BorderLayout.SOUTH);
         }
 
         return wrapper;
@@ -488,165 +549,4 @@ public class PanelAdminCitas {
         dialog.setVisible(true);
     }
 
-    // ════════════════════════════════════════════════════════
-    //  RENDERER columna Accion — muestra boton visual
-    // ════════════════════════════════════════════════════════
-    private class AccionRenderer extends JPanel implements TableCellRenderer {
-        private final JButton btnConfirmar = new JButton("Confirmar");
-        private final JButton btnCancelar  = new JButton("Cancelar");
-        private final JLabel  lblDash      = new JLabel("-");
-
-        AccionRenderer() {
-            setOpaque(true);
-            btnConfirmar.setFont(new Font("Arial", Font.BOLD, 11));
-            btnConfirmar.setBackground(new Color(22, 163, 74));
-            btnConfirmar.setForeground(Color.WHITE);
-            btnConfirmar.setOpaque(true); btnConfirmar.setBorderPainted(false);
-            btnConfirmar.setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 10));
-
-            btnCancelar.setFont(new Font("Arial", Font.BOLD, 11));
-            btnCancelar.setBackground(new Color(220, 38, 38));
-            btnCancelar.setForeground(Color.WHITE);
-            btnCancelar.setOpaque(true); btnCancelar.setBorderPainted(false);
-            btnCancelar.setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 10));
-
-            lblDash.setFont(new Font("Arial", Font.PLAIN, 11));
-            lblDash.setForeground(new Color(150, 150, 150));
-        }
-
-        public Component getTableCellRendererComponent(JTable t, Object v, boolean s, boolean f, int r, int col) {
-            removeAll();
-            setLayout(new FlowLayout(FlowLayout.CENTER, 4, 6));
-            Color bg = r % 2 == 0 ? C[2] : C[4];
-            if (s) bg = C[3];
-            setBackground(bg);
-            String estado = t.getValueAt(r, 6) != null ? t.getValueAt(r, 6).toString() : "";
-            switch (estado) {
-                case "CANCELADA":
-                case "COMPLETADA":
-                    add(lblDash);
-                    break;
-                case "CONFIRMADA":
-                    add(btnCancelar);
-                    break;
-                default:
-                    add(btnConfirmar);
-                    add(btnCancelar);
-                    break;
-            }
-            return this;
-        }
-    }
-
-    // ════════════════════════════════════════════════════════
-    //  EDITOR columna Accion — ejecuta la accion al hacer clic
-    // ════════════════════════════════════════════════════════
-    private class AccionEditor extends AbstractCellEditor implements TableCellEditor {
-        private final JPanel  cellPanel    = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 6));
-        private final JButton btnConfirmar = new JButton("Confirmar");
-        private final JButton btnCancelar  = new JButton("Cancelar");
-        private int filaActual = -1;
-        private final JTable tabla;
-        private final List<Citas> citas;
-        private final JPanel bodyRef;
-
-        AccionEditor(JTable tabla, List<Citas> citas, JPanel bodyRef) {
-            this.tabla = tabla; this.citas = citas; this.bodyRef = bodyRef;
-            cellPanel.setOpaque(true);
-
-            btnConfirmar.setFont(new Font("Arial", Font.BOLD, 11));
-            btnConfirmar.setBackground(new Color(22, 163, 74));
-            btnConfirmar.setForeground(Color.WHITE);
-            btnConfirmar.setOpaque(true); btnConfirmar.setBorderPainted(false);
-            btnConfirmar.setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 10));
-            btnConfirmar.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-            btnCancelar.setFont(new Font("Arial", Font.BOLD, 11));
-            btnCancelar.setBackground(new Color(220, 38, 38));
-            btnCancelar.setForeground(Color.WHITE);
-            btnCancelar.setOpaque(true); btnCancelar.setBorderPainted(false);
-            btnCancelar.setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 10));
-            btnCancelar.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-            btnConfirmar.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    fireEditingStopped();
-                    if (filaActual < 0 || filaActual >= citas.size()) return;
-                    Citas cita = citas.get(filaActual);
-                    if (cita.getId() == null) return;
-
-                    int respuesta = JOptionPane.showConfirmDialog(panel,
-                            "¿Confirmar la cita de " +
-                                    (cita.getMascota() != null ? cita.getMascota().getNombre() : "esta mascota") +
-                                    " el " + cita.getFechaCita() + " a las " + cita.getHoraCita() + "?\n" +
-                                    "Se enviará un correo de confirmación al cliente.",
-                            "Confirmar cita", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-
-                    if (respuesta == JOptionPane.YES_OPTION) {
-                        new CitaService().confirmarCita(cita.getId());
-                        cachedTodas = null; construir();
-                        Main.recargarPanelAdmin();
-                        boolean esVacunacion = (cita.getMotivo() != null &&
-                                cita.getMotivo().toLowerCase().contains("vacun"));
-                        if (!esVacunacion && cita.getServicios() != null) {
-                            for (Cita_servicio cs : cita.getServicios()) {
-                                if (cs.getServicio() != null &&
-                                        cs.getServicio().getNombre().toLowerCase().contains("vacun")) {
-                                    esVacunacion = true; break;
-                                }
-                            }
-                        }
-                        if (esVacunacion && cita.getMascota() != null) {
-                            abrirDialogoRegistrarVacuna(cita);
-                        }
-                    }
-                }
-            });
-
-            btnCancelar.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    fireEditingStopped();
-                    if (filaActual < 0 || filaActual >= citas.size()) return;
-                    Citas cita = citas.get(filaActual);
-                    if (cita.getId() == null) return;
-
-                    int respuesta = JOptionPane.showConfirmDialog(panel,
-                            "¿Cancelar la cita de " +
-                                    (cita.getMascota() != null ? cita.getMascota().getNombre() : "esta mascota") +
-                                    " el " + cita.getFechaCita() + " a las " + cita.getHoraCita() + "?",
-                            "Cancelar cita", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-
-                    if (respuesta == JOptionPane.YES_OPTION) {
-                        new CitaService().cancelarCita(cita.getId());
-                        cachedTodas = null; construir();
-                        Main.recargarPanelAdmin();
-                    }
-                }
-            });
-        }
-
-        public Component getTableCellEditorComponent(JTable t, Object v, boolean s, int r, int col) {
-            filaActual = r;
-            cellPanel.removeAll();
-            cellPanel.setBackground(C[3]);
-            String estado = t.getValueAt(r, 6) != null ? t.getValueAt(r, 6).toString() : "";
-            switch (estado) {
-                case "CANCELADA":
-                case "COMPLETADA":
-                    break;
-                case "CONFIRMADA":
-                    cellPanel.add(btnCancelar);
-                    break;
-                default:
-                    cellPanel.add(btnConfirmar);
-                    cellPanel.add(btnCancelar);
-                    break;
-            }
-            return cellPanel;
-        }
-
-        public Object getCellEditorValue() { return null; }
-    }
 }

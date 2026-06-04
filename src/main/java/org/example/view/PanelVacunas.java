@@ -11,7 +11,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 public class PanelVacunas {
     public JPanel panel;
@@ -48,41 +47,23 @@ public class PanelVacunas {
             return;
         }
 
-        JPanel cargando = crearPanelCargando();
-        panel.add(cargando, BorderLayout.CENTER);
+        try {
+            if (Main.clienteActual != null) {
+                cachedVacunas  = Control_vacunas.consultarPorClienteBD(Main.clienteActual.getId());
+                cachedMascotas = Mascotas.consultarPorClienteBD(Main.clienteActual.getId());
+            } else {
+                cachedVacunas  = Collections.emptyList();
+                cachedMascotas = Collections.emptyList();
+            }
+        } catch (Exception e) {
+            cachedVacunas  = Collections.emptyList();
+            cachedMascotas = Collections.emptyList();
+        }
+        if (mascotaSeleccionada == null && !cachedMascotas.isEmpty()) {
+            mascotaSeleccionada = cachedMascotas.get(0);
+        }
+        panel.add(crearContenido(cachedVacunas, cachedMascotas), BorderLayout.CENTER);
         panel.revalidate(); panel.repaint();
-
-        new SwingWorker<Object[], Void>() {
-            @Override
-            protected Object[] doInBackground() {
-                if (Main.clienteActual == null) return new Object[]{Collections.emptyList(), Collections.emptyList()};
-                try {
-                    List<Control_vacunas> vacunas = Control_vacunas.consultarPorClienteBD(Main.clienteActual.getId());
-                    List<Mascotas> mascotas = Mascotas.consultarPorClienteBD(Main.clienteActual.getId());
-                    return new Object[]{vacunas, mascotas};
-                } catch (Exception e) {
-                    return new Object[]{Collections.emptyList(), Collections.emptyList()};
-                }
-            }
-            @Override
-            @SuppressWarnings("unchecked")
-            protected void done() {
-                try {
-                    Object[] result = get();
-                    cachedVacunas  = (List<Control_vacunas>) result[0];
-                    cachedMascotas = (List<Mascotas>) result[1];
-                } catch (InterruptedException | ExecutionException e) {
-                    cachedVacunas  = Collections.emptyList();
-                    cachedMascotas = Collections.emptyList();
-                }
-                if (mascotaSeleccionada == null && !cachedMascotas.isEmpty()) {
-                    mascotaSeleccionada = cachedMascotas.get(0);
-                }
-                panel.remove(cargando);
-                panel.add(crearContenido(cachedVacunas, cachedMascotas), BorderLayout.CENTER);
-                panel.revalidate(); panel.repaint();
-            }
-        }.execute();
     }
 
     private JPanel crearPanelCargando() {

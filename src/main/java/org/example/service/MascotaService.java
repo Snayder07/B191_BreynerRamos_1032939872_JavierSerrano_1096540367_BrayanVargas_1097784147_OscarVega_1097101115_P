@@ -10,6 +10,22 @@ import java.util.List;
 
 public class MascotaService {
 
+    // ── Atributos propios ─────────────────────────────────────────────────
+    private boolean crearEspecieAutomaticamente;  // si se crea la especie si no existe
+    private int     maxLongitudNombre;            // longitud maxima del nombre de la mascota
+
+    public MascotaService() {
+        this.crearEspecieAutomaticamente = true;
+        this.maxLongitudNombre           = 100;
+    }
+
+    public boolean isCrearEspecieAutomaticamente()                   { return crearEspecieAutomaticamente; }
+    public void    setCrearEspecieAutomaticamente(boolean valor)     { this.crearEspecieAutomaticamente = valor; }
+
+    public int  getMaxLongitudNombre()                               { return maxLongitudNombre; }
+    public void setMaxLongitudNombre(int max)                        { this.maxLongitudNombre = max; }
+
+    // ── Excepcion propia del servicio ─────────────────────────────────────
     public static class NecesitaCaracteristicaException extends Exception {
         public NecesitaCaracteristicaException(String msg) { super(msg); }
     }
@@ -18,6 +34,8 @@ public class MascotaService {
                                  String fechaNacStr, String sexo, String caracteristica) throws Exception {
         if (nombre == null || nombre.trim().isEmpty())
             throw new Exception("El nombre de la mascota es obligatorio.");
+        if (nombre.trim().length() > maxLongitudNombre)
+            throw new Exception("El nombre no puede superar " + maxLongitudNombre + " caracteres.");
         if (especie == null) throw new Exception("Selecciona una especie.");
         if (cliente == null) throw new Exception("Selecciona un dueno.");
 
@@ -82,6 +100,7 @@ public class MascotaService {
         if (nombre == null || nombre.trim().isEmpty()) return null;
         Especies existente = Especies.buscarPorNombreBD(nombre.trim());
         if (existente != null) return existente;
+        if (!crearEspecieAutomaticamente) return null;
         Especies nueva = new Especies();
         nueva.setNombre(nombre.trim());
         nueva.insertarBD();

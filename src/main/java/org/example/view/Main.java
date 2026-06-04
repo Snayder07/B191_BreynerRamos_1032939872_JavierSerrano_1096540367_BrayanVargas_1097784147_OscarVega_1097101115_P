@@ -57,9 +57,8 @@ public class Main {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(420, 520);
         frame.setLocationRelativeTo(null);
-        cursorNormal = crearCursorGarra();
-        cursorHover  = crearCursorGarraHover();
-        frame.setCursor(cursorNormal);
+        cursorNormal = Cursor.getDefaultCursor();
+        cursorHover  = new Cursor(Cursor.HAND_CURSOR);
         frame.setVisible(true);
 
         cambiarPantalla("login");
@@ -124,11 +123,11 @@ public class Main {
         }
     }
 
-    // ── Cursores de garra (inicializados al arrancar) ─────
+    // ── Cursores del sistema ──────────────────────────────
     public static Cursor cursorNormal;
     public static Cursor cursorHover;
 
-    // ── Cursor de garra de perrito ────────────────────────
+    // Métodos de cursor mantenidos por compatibilidad
     public static Cursor crearCursorGarra() {
         // Usamos 32x32 pero dibujamos pequeño (como cursor normal ~18px)
         BufferedImage img = new BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB);
@@ -235,7 +234,7 @@ public class Main {
     }
 
     public static void recargarPanelAdmin() {
-        panelAdmin.invalidarCache();
+        panelAdmin.recargar();
     }
 
 }
