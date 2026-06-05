@@ -8,9 +8,9 @@ public class ConexionBD {
     private Connection connection;
     private Statement  stmtConsulta;   // solo para mantener vivo el ResultSet activo
 
-    private static final String URL  = "jdbc:postgresql://aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require&prepareThreshold=0";
-    private static final String USER = "postgres.swsxsodiwaoeqtkiqfox";
-    private static final String PASS = "BVOVBRDS071207";
+    private static String URL  = "jdbc:postgresql://aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require&prepareThreshold=0";
+    private static String USER = "postgres.swsxsodiwaoeqtkiqfox";
+    private static String PASS = "BVOVBRDS071207";
 
     public ConexionBD() {
         try {
