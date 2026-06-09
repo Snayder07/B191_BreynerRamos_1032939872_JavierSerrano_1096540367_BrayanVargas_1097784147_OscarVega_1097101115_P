@@ -13,11 +13,6 @@ import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 
-/**
- * Dialog para que el admin registre una cita manualmente,
- * incluyendo datos del dueno y mascota para personas
- * que no usan la app.
- */
 public class NuevaCitaAdminDialog extends JDialog {
 
     private static final Color VERDE    = new Color(22, 101, 52);

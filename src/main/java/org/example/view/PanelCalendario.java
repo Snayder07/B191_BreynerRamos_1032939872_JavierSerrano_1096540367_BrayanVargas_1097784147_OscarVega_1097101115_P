@@ -13,15 +13,6 @@ import java.time.format.*;
 import java.util.*;
 import java.util.List;
 
-/**
- * PanelCalendario v4.0
- * - Clic en tarjeta → popup de edición inline (fecha + hora)
- * - Al guardar, la tarjeta se reposiciona en el calendario automáticamente
- * - La tarjeta muestra: fecha, hora, mascota, cliente, prioridad
- * - Columnas alineadas dinámicamente
- * - Sin domingo (Lun–Sáb)
- * - Colores por prioridad
- */
 public class PanelCalendario {
 
     public JPanel panel;
